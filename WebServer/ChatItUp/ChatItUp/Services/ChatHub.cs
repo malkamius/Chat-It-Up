@@ -94,8 +94,11 @@ namespace ChatItUp.Services
                             var newbuffer = new byte[0];
                             try
                             {
-                                var decoded = decoder.Decode(totalbuffer, totalbuffer.Length, out var decodedlength);
-                                outstream.Write(decoded, 0, decodedlength);
+                                if (tracknumber == 1)
+                                {
+                                    var decoded = decoder.Decode(totalbuffer, totalbuffer.Length, out var decodedlength);
+                                    outstream.Write(decoded, 0, decodedlength);
+                                }
                             }
                             catch (Exception ex)
                             {
