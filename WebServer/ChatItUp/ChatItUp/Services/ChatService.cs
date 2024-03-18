@@ -7,6 +7,9 @@ using ChatItUp.Data;
 using ChatItUp.Context;
 using ChatItUp.Models;
 using System.Security.Claims;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 
 namespace ChatItUp.Services
 {
@@ -36,6 +39,8 @@ namespace ChatItUp.Services
             public Guid Id { get; set; }
             public string Name { get; set; }
 
+            public string ImageUrl { get; set; }
+
         }
 
         public class Channel
@@ -59,9 +64,10 @@ namespace ChatItUp.Services
 
         public async Task<List<Server>> GetServers(Guid userId)
         {
+            ///api/chat/GetRecentMessages?channelId=
             return await _context.UserServers
                 .Where(us => us.UserId == userId)
-                .Select(us => new Server { Id = us.Server.Id, Name = us.Server.Name })
+                .Select(us => new Server { Id = us.Server.Id, Name = us.Server.Name, ImageUrl = "api/ServerImage/GetServerImage?ServerId=" + us.ServerId.ToString() })
                 .ToListAsync();
         }
 
@@ -105,6 +111,60 @@ namespace ChatItUp.Services
 
             await _context.Messages.AddAsync(newMessage);
             await _context.SaveChangesAsync();
+        }
+
+        internal async Task<Byte[]> GetServerImageAsync(Guid userId, Guid serverId)
+        {
+            var server = _context.UserServers.Include(us => us.Server) // Ensure Server is eagerly loaded
+                .FirstOrDefault(us => us.UserId == userId && us.ServerId == serverId);
+
+            
+            // Create an image in memory
+            using (var bitmap = new Bitmap(64, 64))
+            using (var g = Graphics.FromImage(bitmap))
+            using (var ms = new MemoryStream())
+            {
+                Image? srcImage = null;
+                try
+                {
+
+                    if (server != null && server.Server != null && server.Server.Image != null && server.Server.Image.Length > 0)
+                    {
+                        using (var instream = new MemoryStream(server.Server.Image))
+                        {
+                            srcImage = Image.FromStream(instream);
+                        }
+
+                    }
+
+                    if (srcImage != null)
+                    {
+                        g.DrawImage(srcImage, 0, 0, 64, 64);
+                    }
+                    else
+                    {
+                        var firstLetter = server != null && server.Server != null? server.Server.Name.FirstOrDefault('@').ToString() : "@";
+                        // Customize your image here
+                        g.Clear(Color.Gray); // Background color
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        var font = new Font("Arial", 24, FontStyle.Bold, GraphicsUnit.Pixel);
+                        var textSize = g.MeasureString(firstLetter, font);
+                        g.DrawString(firstLetter, font, Brushes.White, (64 - textSize.Width) / 2, (64 - textSize.Height) / 2);
+                    }
+                }
+                finally 
+                {
+                    if (srcImage != null) srcImage.Dispose();
+                }
+                // Save the image to a memory stream in PNG format
+                bitmap.Save(ms, ImageFormat.Png);
+
+                // Set the position to the beginning of the stream
+                ms.Position = 0;
+
+                // Return the stream as a file
+                return ms.ToArray();
+            }
         }
     }
 }

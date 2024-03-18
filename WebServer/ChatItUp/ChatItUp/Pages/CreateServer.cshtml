@@ -1,0 +1,117 @@
+﻿@page
+@model ChatItUp.Pages.CreateServerModel
+
+@{
+    Layout = "_ModalDialogLayout";
+}
+
+<div id="errorMessages" class="alert alert-danger" style="display: none;"></div>
+
+<form id="createServerForm" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="Name">Server Name</label>
+        <input type="text" class="form-control" id="Name" name="Name" value="@Model.Name" required>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    
+    <div class="form-group">
+        <label for="Description">Server Description</label>
+        <input type="text" class="form-control" id="Description" name="Description" value="@Model.Description">
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label for="ImageUrl">Image Url</label>
+        <input type="text" class="form-control" id="ImageUrl" name="ImageUrl" value="@Model.ImageUrl" aria-required="false">
+        <span asp-validation-for="ImageUrl" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label for="UploadedImage">Or Upload an Image</label>
+        <input type="file" class="form-control-file" id="UploadedImage" name="UploadedImage">
+        <span asp-validation-for="UploadedImage" class="text-danger"></span>
+    </div>
+    <button id="CancelButton" type="button" class="btn btn-primary">Cancel</button> <button type="submit" class="btn btn-primary">Create Server</button>
+</form>
+
+<script>
+    window.OnOK = function () { alert("Success."); };
+    window.OnCancel = function () { alert("Cancelled."); };
+    $("#CancelButton").on('click', (event) => { OnCancel(); });
+    $(document).ready(function () {
+        var formActionUrl = '@Model.CurrentUrl'; // Set the URL from the model
+
+        $.validator.addMethod("filesize", function (value, element, param) {
+            return this.optional(element) || (element.files[0].size <= param);
+        }, 'The image must be smaller than 2MB.');
+
+        $("#createServerForm").validate({
+            rules: {
+                Name: {
+                    required: true
+                },
+                UploadedImage: {
+                    required: false,
+                    filesize: 2097152 // 2MB
+                }
+            },
+            messages: {
+                Name: {
+                    required: "Server name is required."
+                },
+                UploadedImage: {
+                    filesize: "The image must be smaller than 2MB."
+                }
+            },
+            errorPlacement: function (error, element) {
+                $("#errorMessages").html("");
+               error.appendTo("#errorMessages");
+               
+            },
+            invalidHandler: function (event, validator) {
+                // Show the div only if there are errors
+                var errors = validator.numberOfInvalids();
+                if (errors) {
+                    $("#errorMessages").show();
+                } else {
+                    $("#errorMessages").hide();
+                }
+            }
+        });
+
+        $("#createServerForm").submit(function (event) {
+            event.preventDefault(); // Prevent the default form submission
+           
+            $(this).validate(); // This initializes validation if it hasn't been already
+            if (!$(this).valid()) {
+                return; // If the form is not valid, don't proceed with the AJAX call
+            }
+
+            var formData = new FormData(this);
+
+            $.ajax({
+                url: formActionUrl, // Set the URL to your page handler
+                type: 'POST',
+                data: formData,
+                processData: false, // tell jQuery not to process the data
+                contentType: false, // tell jQuery not to set contentType
+                success: function (response) {
+                    OnOK();
+                    // Handle success (e.g., display a success message or redirect)
+                },
+                error: function (xhr, status, error) {
+                    console.error("Submission failed: ", status, xhr.responseText);
+                    $("#errorMessages").html(xhr.responseText);
+                    $("#errorMessages").show();
+
+                    // Handle failure (e.g., display an error message)
+                }
+            });
+        });
+    });
+</script>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
