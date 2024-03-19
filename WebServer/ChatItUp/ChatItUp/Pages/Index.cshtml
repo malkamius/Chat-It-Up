@@ -169,12 +169,14 @@
     // Sending a message
     document.getElementById("sendButton").addEventListener("click", function (event) {
         var user = "User"; // You might want to use a more dynamic way to get the user's name
-        var message = document.getElementById("messageInput").value;
-        connection.invoke("SendMessage", selectedChannelId, message).catch(function (err) {
-            return console.error(err.toString());
-        });
-        document.getElementById("messageInput").value = ''; // Clear the input after sending
-        event.preventDefault();
+        if (selectedServerId && selectedChannelId) { 
+            var message = document.getElementById("messageInput").value;
+            connection.invoke("SendMessage", selectedChannelId, message).catch(function (err) {
+                return console.error(err.toString());
+            });
+            document.getElementById("messageInput").value = ''; // Clear the input after sending
+            event.preventDefault();
+        }
     });
 
     

@@ -167,6 +167,8 @@ function selectChannel(channelId) {
 }
 
 async function fetchChannelsForServer(serverId) {
+    skipCount = 0; // Reset skip count for new channel
+    messagesDiv.innerHTML = ''; // Clear existing messages
     channels = [];
     if (loading) return;
     loading = true;
