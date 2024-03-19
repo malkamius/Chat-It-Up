@@ -5,6 +5,10 @@
 @{
     //var recentMessages = await ChatService.GetRecentMessagesAsync();
 }
+@section HeaderScripts {
+    <script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
+    <script src="~/js/Chat.js" asp-append-version="true"></script>
+}
 @section Styles {
     <style>
         #connectionStatus {
@@ -91,11 +95,34 @@
             flex-direction: column-reverse; /* Keep the scroll bar at the bottom initially */
         }
 
+        .context-menu {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            width: 200px;
+            background: white;
+            border: 1px solid #ddd;
+            box-shadow: 0px 0px 5px #aaa;
+        }
 
+        .context-menu ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .context-menu ul li {
+            padding: 10px;
+            cursor: pointer;
+        }
+
+        .context-menu ul li:hover {
+            background-color: #f0f0f0;
+        }
     </style>
 }
 
-<script src="~/lib/signalr/dist/browser/signalr.min.js"></script>
+
 <!-- Modal Backdrop -->
 <div id="modalBackdrop" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1040;"></div>
 
@@ -106,6 +133,13 @@
 
 
 <div id="connectionStatus" class="hidden">Disconnected - Attempting to reconnect...</div>
+
+<div id="contextMenu" class="context-menu">
+    <ul>
+        <li id="createInvite">Create Invite Code</li>
+        <li id="deleteServer">Delete Server</li>
+    </ul>
+</div>
 
 <span style="align-content:center"><input id="AudioCheckbox" type="checkbox" /> Audio</span>
 
@@ -130,120 +164,7 @@
 </div>
 
 <script>
-    var connection = new signalR.HubConnectionBuilder().withUrl("/chathub").build();
-    skipCount = 0;
-    const limit = 3;
-    let loading = false;
-    let selectedChannelId;
-    let selectedServerId;
-    // Receiving messages from the server
-    connection.on("ReceiveMessage", function (channelid, userid, message) {
-        if (channelid == selectedChannelId)
-            appendMessage(userid, message, true);
-    });
-
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    document.body.addEventListener('click', function () {
-        if (audioContext.state === 'suspended') {
-            audioContext.resume();
-        }
-    });
-    let audioQueue = [];
-    let isPlaying = false;
-    let isPlayingInner = false;
-    let nextTime = 0; // When the next audio chunk should start playing
-
-    // Function to process and play queued audio data
-    async function processAudioQueue() {
-        if (isPlaying || audioQueue.length === 0) return;
-        isPlaying = true;
-        if (audioContext.state === 'suspended') {
-            audioContext.resume();
-        }
-        while (audioQueue.length > 0) {
-            const audioChunkArrayBuffer = audioQueue.shift();
-            try {
-                await audioContext.decodeAudioData(audioChunkArrayBuffer, function (audioBuffer) {
-                    const source = audioContext.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.connect(audioContext.destination);
-                    // Schedule the source to start playing at `nextTime`
-                    const now = audioContext.currentTime;
-                    source.start(Math.max(nextTime, now));
-                    // Update `nextTime` to schedule the next chunk
-                    nextTime = Math.max(nextTime, now) + audioBuffer.duration;
-                    source.onended = () => {
-                        // When the audio chunk finishes playing, try to process the next one
-                        isPlaying = false;
-                        //processAudioQueue();
-                    };
-                }, (err) => console.error(err));
-                
-            } catch (error) {
-                console.error("Error playing audio chunk:", error);
-                isPlaying = false;
-            }
-        }
-    }
-
-    // Revised event listener to queue audio chunks
-    connection.on("ReceiveAudioChunk", async base64AudioChunk => {
-        console.log("Received audio");
-        console.log(base64AudioChunk.substr(0, 500));
-        const audioChunkArrayBuffer = Uint8Array.from(atob(base64AudioChunk), c => c.charCodeAt(0)).buffer;
-        if (audioChunkArrayBuffer.byteLength > 0) {
-            audioQueue.push(audioChunkArrayBuffer);
-            processAudioQueue(); // Try to process the queue
-        }
-    });
-
-
-    // Function to toggle the connection status display
-    function toggleConnectionStatus(isConnected) {
-        const statusDiv = document.getElementById('connectionStatus');
-        if (isConnected) {
-            statusDiv.classList.remove('visible');
-            statusDiv.classList.add('hidden');
-        } else {
-            statusDiv.classList.remove('hidden');
-            statusDiv.classList.add('visible');
-
-            if (selectedChannelId) {
-                selectChannel(selectedChannelId);
-            }
-        }
-    }
-
-    // Monitor the connection status
-    connection.onclose(async () => {
-        toggleConnectionStatus(false);
-        attemptReconnect();
-    });
-
-    async function attemptReconnect() {
-        let isConnected = false;
-        while (!isConnected) {
-            try {
-                await connection.start();
-                console.log("Reconnected to the SignalR hub successfully.");
-                isConnected = true;
-                toggleConnectionStatus(true);
-            } catch (err) {
-                console.error("Reconnection attempt failed, retrying...", err);
-                // Wait for 1 or 5 seconds before trying to reconnect
-                await new Promise(resolve => setTimeout(resolve, 5000)); // Adjust the timeout as needed
-            }
-        }
-    }
-
-    // Initially attempt to connect
-    connection.start().then(function () {
-        toggleConnectionStatus(true);
-    }).catch(function (err) {
-        console.error("Failed to connect SignalR hub on start.", err.toString());
-        toggleConnectionStatus(false);
-        attemptReconnect();
-    });
+    
 
     // Sending a message
     document.getElementById("sendButton").addEventListener("click", function (event) {
@@ -256,183 +177,7 @@
         event.preventDefault();
     });
 
-    const messagesDiv = document.getElementById('messages');
-
-    function appendMessage(user, message, prepend = false, scroll = true) {
-        const msgDiv = document.createElement("div");
-        msgDiv.textContent = user + ": " + message;
-        if (prepend) {
-            messagesDiv.prepend(msgDiv); // Add messages to the top
-            if(scroll)
-                messagesDiv.scrollTop = messagesDiv.firstChild.clientHeight;
-        } else {
-            messagesDiv.appendChild(msgDiv); // Add messages to the bottom
-            if (scroll)
-                messagesDiv.scrollTop = messagesDiv.lastChild.clientHeight;
-        }
-    }
-
-    async function loadMessages(initial = false) {
-        if (loading) return;
-        loading = true;
-
-        const response = await fetch(`/api/chat/GetRecentMessages?channelId=${selectedChannelId}&skip=${skipCount}`);
-        if (response.ok) {
-            const messages = await response.json();
-            messages.forEach(msg => appendMessage(msg.user, msg.body, false, skipCount == 0));
-            skipCount += messages.length;
-            if (messages.length > 0) {
-                // Adjust scroll position only if we're not loading the initial page of messages
-                //if (!initial) {
-                    //messagesDiv.scrollTop = messagesDiv.firstChild.clientHeight;
-                //}
-            }
-        } else {
-            console.error('Failed to fetch messages');
-        }
-
-        loading = false;
-    }
-
-    messagesDiv.addEventListener('scroll', () => {
-        isScrolledToTop = messagesDiv.scrollTop === (messagesDiv.clientHeight - messagesDiv.scrollHeight);
-
-        // Check if scrolled to the top
-        if (isScrolledToTop && !loading) {
-            loadMessages();
-        }
-    });
-
-    function selectChannel(channelId) {
-        selectedChannelId = channelId;
-        skipCount = 0; // Reset skip count for new channel
-        messagesDiv.innerHTML = ''; // Clear existing messages
-        
-        document.querySelectorAll('.channel').forEach(channel => {
-            channel.classList.remove('selected-channel');
-            if (channel.dataset.channelId === channelId) {
-                channel.classList.add('selected-channel');
-            }
-        });
-        skipCount = 0;
-
-        loadMessages(true); // Load messages for the selected channel
-    }
-
-    async function fetchChannelsForServer(serverId) {
-        channels = [];
-        if (loading) return;
-        loading = true;
-
-        const response = await fetch(`/api/chat/GetChannels?serverId=${serverId}`);
-        if (response.ok) {
-            channels = await response.json();
-            updateChannelList(channels);
-
-        } else {
-            console.error('Failed to fetch messages');
-        }
-
-        loading = false;
-        if (channels.length > 0)
-            selectChannel(selectedChannelId? selectedChannelId : channels[0].id);
-    }
-        
-    function updateChannelList(channels) {
-        const channelListDiv = document.getElementById('channelList');
-        channelListDiv.innerHTML = ''; // Clear existing channels
-
-        channels.forEach(channel => {
-            const channelDiv = document.createElement('div');
-            channelDiv.className = 'channel';
-            channelDiv.textContent = channel.name;
-            channelDiv.setAttribute('data-channel-id', channel.id);
-            channelDiv.onclick = function () { selectChannel(channel.id); };
-            channelListDiv.appendChild(channelDiv);
-        });
-        
-        
-    }
     
-    function selectServer(serverId) {
-        if (selectedServerId != serverId) selectedChannelId = undefined;
-        selectedServerId = serverId;
-        document.querySelectorAll('.server').forEach(server => {
-            server.classList.remove('selected-server');
-            if (server.dataset.serverId === serverId) {
-                server.classList.add('selected-server');
-            }
-        });
-
-        // Simulate fetching channels for the selected server
-        // Replace this part with an actual API call if necessary
-        channels = fetchChannelsForServer(serverId);
-        
-    }
-
-    async function fetchServers() {
-        servers = [];
-        if (loading) return;
-        loading = true;
-
-        const response = await fetch(`/api/chat/GetServers`);
-        if (response.ok) {
-            servers = await response.json();
-            updateServerList(servers);
-            
-        } else {
-            console.error('Failed to fetch servers');
-        }
-
-        loading = false;
-        
-        if(servers.length > 0)
-            selectServer(selectedServerId? selectedServerId : servers[0].id);
-    }
-
-    function updateServerList(servers) {
-        const serverListDiv = document.getElementById('serverList');
-        serverListDiv.innerHTML = ''; // Clear existing channels
-
-        servers.forEach(server => {
-            const serverDiv = document.createElement('div');
-            serverDiv.className = 'server';
-            //serverDiv.textContent = server.name;
-            serverDiv.setAttribute('data-server-id', server.id);
-
-            const image = document.createElement('img');
-            image.src = server.imageUrl; // Assuming server object has an `imageUrl` property
-            image.alt = server.name;
-            image.style.width = '64px';
-            image.style.height = '64px';
-            image.style.borderRadius = '50%'; // Makes the image circular
-            image.title = server.name; // Tooltip
-
-            serverDiv.appendChild(image);
-
-            serverDiv.onclick = function () { selectServer(server.id); };
-            serverListDiv.appendChild(serverDiv);
-        });
-
-        const serverDiv = document.createElement('div');
-        serverDiv.className = 'server';
-        //serverDiv.textContent = server.name;
-        serverDiv.setAttribute('data-server-id', '*');
-
-        const image = document.createElement('img');
-        image.src = "/image/PlusSign.png"; // Assuming server object has an `imageUrl` property
-        image.alt = 'Create new server';
-        image.style.width = '64px';
-        image.style.height = '64px';
-        image.style.borderRadius = '50%'; // Makes the image circular
-        image.title = 'Create new server'; // Tooltip
-
-        serverDiv.appendChild(image);
-
-        serverDiv.onclick = function () { showModalCreateServer(); };// window.location.href = "/CreateServer" };
-        serverListDiv.appendChild(serverDiv);
-       
-    }
     
     async function showModalCreateServer() {
         $.ajax({
@@ -457,65 +202,84 @@
         });
 
     }
-    fetchServers();
 
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let skip = 0;
-    let thestream = null;
-    async function ToggleAudio() {
-        // Assuming your checkbox has an ID of "AudioCheckbox"
-        let isChecked = document.getElementById("AudioCheckbox").checked;
+    async function showModalDeleteServer(ServerId) {
+        $.ajax({
+            url: "/DeleteServer?ServerId=" + ServerId, // Adjust the URL as needed
+            success: function (response) {
+                $("#modalContent").html(response);
+                $("#modalBackdrop, #modalContent").show();
+                window.OnOK = function () {
 
-        if (isChecked) {
-            // Start recording
-            if (mediaRecorder === null || mediaRecorder.state === "inactive") {
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(stream => {
-                        thestream = stream;
-                        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm; codecs=opus' });
-                        mediaRecorder.ondataavailable = event => {
-                            //audioChunks.push(event.data);
-                            if (mediaRecorder.state === 'recording') {
-                                // After collecting a chunk, send it immediately
-                                sendAudioChunk(event.data);
-                                
-                            }
-                        };
-                        mediaRecorder.start(1000); // Split audio into chunks every 1 second
-                        
-                    });
-            }
-        } else {
-            // Stop recording and send audio
-            if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                mediaRecorder.stop();
-                mediaRecorder.onstop = async () => {
-                    
-                    // Reset mediaRecorder to allow a new recording session
-                    mediaRecorder.stream.getTracks().forEach(track => track.stop());
-                    mediaRecorder = null;
-                    console.log("Recording stopped and data sent");
+                    fetchServers();
+                    $("#modalBackdrop, #modalContent").hide();
+
                 };
+
+                window.OnCancel = function () {
+                    $("#modalBackdrop, #modalContent").hide();
+                };
+            },
+            error: function () {
+                alert("Failed to load the form.");
             }
-        }
-    }
-    
-    async function sendAudioChunk(chunk) {
-        chunk.arrayBuffer().then(arrayBuffer => {
-            const base64String = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-            console.log(base64String.substr(0, 500));
-            
-            // Assuming you have a SignalR connection setup as `connection`
-            connection.invoke("SendAudioChunk", base64String);
         });
+
     }
-
     
+    $(document).ready(function () {
+        contextMenu = document.getElementById('contextMenu');
 
-    document.getElementById("AudioCheckbox").addEventListener("click", function (event) {
-        ToggleAudio();
+        // Hide context menu on clicking elsewhere
+        document.addEventListener('click', function (e) {
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.style.display = 'none';
+            }
+        });
+
+        // Option click handler
+        document.getElementById('createInvite').addEventListener('click', function () {
+            const serverId = contextMenu.getAttribute('data-server-id');
+            console.log(`Creating invite for server ${serverId}`);
+            // Implement your code to create an invite code here
+            contextMenu.style.display = 'none';
+        });
+
+        document.getElementById('deleteServer').addEventListener('click', function () {
+            const serverId = contextMenu.getAttribute('data-server-id');
+            console.log(`Deleting server ${serverId}`);
+            showModalDeleteServer(serverId);
+            contextMenu.style.display = 'none';
+
+        });
+        
+
+        // Assuming contextMenu is correctly defined and selected earlier in your script
+        document.getElementById('serverList').addEventListener('contextmenu', function (e) {
+            e.preventDefault(); // Prevent the default context menu
+            let target = e.target;
+            while (target != null && !target.classList.contains('server')) {
+                target = target.parentNode; // Ensure we're getting the .server div even if an img or child element is clicked
+            }
+            if (target) {
+                // Show and position the custom context menu
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${e.pageX}px`;
+                contextMenu.style.top = `${e.pageY}px`;
+
+                // Set the server ID for later actions
+                const serverId = target.getAttribute('data-server-id');
+                contextMenu.setAttribute('data-server-id', serverId);
+            }
+        });
+
+        // Global click to hide the context menu
+        document.addEventListener('click', function (e) {
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.style.display = 'none';
+            }
+        });
     });
-
+    
 </script>
 
