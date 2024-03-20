@@ -37,10 +37,12 @@ namespace ChatItUp.Pages
                 Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
 
                 var invite = _context.ServerInviteCodes.FirstOrDefault(invite => invite.InviteCode == InviteCode);
-
+                
                 if(invite != null) 
                 {
-                    if (invite.ExpiresOn < DateTime.Now)
+                    var server = _context.Servers.FirstOrDefault(s => s.Id == invite.ServerId);
+                    
+                    if (invite.ExpiresOn < DateTime.Now || server == null || server.DeletedOn.HasValue)
                     {
                         Successful = false;
                         LinkExpired = true;

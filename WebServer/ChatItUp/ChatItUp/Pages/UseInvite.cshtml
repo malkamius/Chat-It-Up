@@ -1,5 +1,32 @@
 ﻿@page
 @model ChatItUp.Pages.UseInviteModel
-@{
-}
 
+<div>
+    <span id='SuccessMessage' style="display:none;">You joined the server.</span>
+    <span id='AlreadyMemberMessage' style="display:none;">You are already a member of this server.</span>
+    <span id='LinkExpiredMessage' style="display:none;">That invite code has expired.</span>
+    <span id='FailedMessage' style="display:none;">Failed to use the invite code.</span>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+        @if (Model.Successful)
+        {
+            <text>$("#SuccessMessage").show(); </text>
+        }
+        else if (Model.AlreadyMember)
+        {
+            <text>$("#AlreadyMemberMessage").show(); </text>
+        }
+        else if (Model.LinkExpired)
+        {
+            <text>$("#LinkExpiredMessage").show(); </text>
+        }
+        else
+        {
+            <text>$("#FailedMessage").show(); </text>
+        }
+                });
+    </script>
+}
