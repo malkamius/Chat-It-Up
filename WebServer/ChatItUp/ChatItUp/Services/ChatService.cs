@@ -54,15 +54,23 @@ namespace ChatItUp.Services
         }
         public async Task<List<Message>> GetRecentMessagesAsync(Guid userId, Guid channelId, int skip = 0)
         {
-
-
             return await _context.Messages
-                                .Where(m => m.ChannelId == channelId)
-                                .OrderByDescending(m => m.SentOn)
-                                .Skip(skip)
-                                .Take(3)
-                                .Select(item => new Message { Channel = item.ChannelId, User = item.SentBy.ToString(), Body = item.Body, SentOn = item.SentOn })
-                          .ToListAsync();
+        .Where(m => m.ChannelId == channelId)
+        .OrderByDescending(m => m.SentOn)
+        .Skip(skip)
+        .Take(3)
+        .Join(_context.Users, // The table you're joining with
+              message => message.SentBy, // Field from the first table to join on
+              user => user.Id, // Field from the second table to join on
+              (message, user) => new { Message = message, User = user }) // Selector to create a new result
+        .Select(item => new Message
+        {
+            Channel = item.Message.ChannelId,
+            User = item.User.DisplayName ?? item.User.EmailAddress, // Assuming DisplayName is your user's display name property
+            Body = item.Message.Body,
+            SentOn = item.Message.SentOn
+        })
+        .ToListAsync();
         }
 
         public async Task<List<Server>> GetServers(Guid userId)

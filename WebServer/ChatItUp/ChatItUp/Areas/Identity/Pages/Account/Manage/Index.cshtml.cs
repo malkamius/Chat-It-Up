@@ -16,13 +16,15 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
-
+        private readonly Context.CIUDataDbContext _context;
         public IndexModel(
             UserManager<IdentityUser> userManager,
-            SignInManager<IdentityUser> signInManager)
+            SignInManager<IdentityUser> signInManager,
+            Context.CIUDataDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _context = context;
         }
 
         /// <summary>
@@ -58,18 +60,23 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
             [Phone]
             [Display(Name = "Phone number")]
             public string PhoneNumber { get; set; }
+
+            [Display(Name = "Display Name")]
+            public string? DisplayName { get; set; }
         }
 
         private async Task LoadAsync(IdentityUser user)
         {
             var userName = await _userManager.GetUserNameAsync(user);
             var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
+            var dataUser = _context.Users.FirstOrDefault(u => u.Id == Guid.Parse(user.Id));
 
             Username = userName;
 
             Input = new InputModel
             {
-                PhoneNumber = phoneNumber
+                PhoneNumber = phoneNumber,
+                DisplayName = dataUser != null? dataUser.DisplayName : null
             };
         }
 
@@ -88,7 +95,9 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
         public async Task<IActionResult> OnPostAsync()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            var dataUser = _context.Users.FirstOrDefault(u => u.Id == Guid.Parse(user.Id));
+
+            if (user == null || dataUser == null)
             {
                 return NotFound($"Unable to load user with ID '{_userManager.GetUserId(User)}'.");
             }
@@ -108,6 +117,33 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
                     StatusMessage = "Unexpected error when trying to set phone number.";
                     return RedirectToPage();
                 }
+            }
+
+            string newDisplayName = null;
+            if (!string.IsNullOrEmpty(Input.DisplayName) && !string.IsNullOrEmpty(Input.DisplayName.Trim()))
+                newDisplayName = Input.DisplayName.Trim();
+            
+
+            var displayName = dataUser.DisplayName;
+            
+            if(Input.DisplayName != displayName)
+            {
+                var conflict = _context.Users.FirstOrDefault(u => u.DisplayName.ToLower() == newDisplayName.ToLower());
+                if (conflict != null)
+                {
+                    StatusMessage = "That display name is already taken.";
+                    return RedirectToPage();
+                }
+                if (!string.IsNullOrEmpty(newDisplayName))
+                {
+                    dataUser.DisplayName = newDisplayName;
+                }
+                else
+                {
+                    dataUser.DisplayName = null;
+                }
+                _context.Users.Update(dataUser);
+                await _context.SaveChangesAsync();
             }
 
             await _signInManager.RefreshSignInAsync(user);
