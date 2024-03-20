@@ -4,11 +4,14 @@ const limit = 3;
 let loading = false;
 let selectedChannelId;
 let selectedServerId;
+let serverOwner = false;
 let contextMenu;
 // Receiving messages from the server
 connection.on("ReceiveMessage", function (channelid, userid, message) {
-    if (channelid == selectedChannelId)
+    if (channelid == selectedChannelId) {
         appendMessage(userid, message, true);
+        skipCount++;
+    }
 });
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -64,6 +67,13 @@ connection.on("ReceiveAudioChunk", async base64AudioChunk => {
 
 connection.on("ServerRemoved", async serverId => {
     await fetchServers();
+});
+
+connection.on("ChannelAdded", async (serverId, channelId) => {
+    if (selectedServerId == serverId) {
+        await fetchChannelsForServer(serverId, serverOwner);
+        
+    }
 });
 
 // Function to toggle the connection status display
@@ -169,7 +179,7 @@ function selectChannel(channelId) {
     loadMessages(true); // Load messages for the selected channel
 }
 
-async function fetchChannelsForServer(serverId) {
+async function fetchChannelsForServer(serverId, isServerOwner = false) {
     skipCount = 0; // Reset skip count for new channel
     messagesDiv.innerHTML = ''; // Clear existing messages
     channels = [];
@@ -179,7 +189,7 @@ async function fetchChannelsForServer(serverId) {
     const response = await fetch(`/api/chat/GetChannels?serverId=${serverId}`);
     if (response.ok) {
         channels = await response.json();
-        updateChannelList(channels);
+        updateChannelList(channels, serverId, isServerOwner);
 
     } else {
         console.error('Failed to fetch messages');
@@ -190,7 +200,7 @@ async function fetchChannelsForServer(serverId) {
         selectChannel(selectedChannelId ? selectedChannelId : channels[0].id);
 }
 
-function updateChannelList(channels) {
+function updateChannelList(channels, serverId, isServerOwner) {
     const channelListDiv = document.getElementById('channelList');
     channelListDiv.innerHTML = ''; // Clear existing channels
 
@@ -203,16 +213,43 @@ function updateChannelList(channels) {
         channelListDiv.appendChild(channelDiv);
     });
 
+    if (isServerOwner) {
+        const channelDiv = document.createElement('div');
+        channelDiv.className = 'channel';
+        //serverDiv.textContent = server.name;
+        channelDiv.setAttribute('data-channel-id', '*');
 
+        const image = document.createElement('img');
+        image.src = "/image/PlusSign.png"; // Assuming server object has an `imageUrl` property
+        image.alt = 'Add channel';
+        image.style.width = '32px';
+        image.style.height = '32px';
+        image.style.borderRadius = '50%'; // Makes the image circular
+        image.title = 'Add channel'; // Tooltip
+
+        const textspan = document.createElement('span');
+        textspan.style = "margin-left: 4px;";
+        textspan.textContent = 'Add Channel';
+        channelDiv.onclick = function () { showModalCreateChannel(serverId); };
+        channelDiv.appendChild(image);
+        channelDiv.appendChild(textspan);
+        channelListDiv.appendChild(channelDiv);
+    }
 }
 
 function selectServer(serverId) {
     if (selectedServerId != serverId) selectedChannelId = undefined;
     selectedServerId = serverId;
+    let isOwner = false;
+    serverOwner = false;
     document.querySelectorAll('.server').forEach(server => {
         server.classList.remove('selected-server');
         if (server.dataset.serverId === serverId) {
             server.classList.add('selected-server');
+            if (server.dataset.serverIsOwner == "true") {
+                isOwner = true;
+                serverOwner = true;
+            }
         }
         
     });
@@ -228,7 +265,7 @@ function selectServer(serverId) {
         });
     // Simulate fetching channels for the selected server
     // Replace this part with an actual API call if necessary
-    channels = fetchChannelsForServer(serverId);
+    channels = fetchChannelsForServer(serverId, isOwner);
 
 }
 
@@ -261,6 +298,7 @@ function updateServerList(servers) {
         serverDiv.className = 'server';
         //serverDiv.textContent = server.name;
         serverDiv.setAttribute('data-server-id', server.id);
+        serverDiv.setAttribute('data-server-is-owner', server.isOwner);
 
         const image = document.createElement('img');
         image.src = server.imageUrl; // Assuming server object has an `imageUrl` property
@@ -291,7 +329,7 @@ function updateServerList(servers) {
 
     serverDiv.appendChild(image);
 
-    serverDiv.onclick = function () { showModalCreateServer(); };// window.location.href = "/CreateServer" };
+    serverDiv.onclick = function () { showModalCreateServer(); };
 
     serverListDiv.appendChild(serverDiv);
 

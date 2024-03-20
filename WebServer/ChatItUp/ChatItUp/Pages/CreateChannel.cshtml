@@ -1,0 +1,98 @@
+﻿@page
+@model ChatItUp.Pages.CreateChannelModel
+
+@{
+    Layout = "_ModalDialogLayout";
+}
+
+<div id="errorMessages" class="alert alert-danger" style="display: none;"></div>
+
+<form id="createChannelForm" method="post" enctype="multipart/form-data">
+    <input type="hidden" id="ServerId" name="ServerId" value="@Model.ServerId" />
+    <div class="form-group">
+        <label for="Name">Channel Name</label>
+        <input type="text" class="form-control" id="Name" name="Name" value="@Model.Name" required>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    
+    <button id="CancelButton" type="button" class="btn btn-primary">Cancel</button> <button type="submit" class="btn btn-primary">Create Channel</button>
+</form>
+
+<script>
+    window.OnOK = function () { alert("Success."); };
+    window.OnCancel = function () { alert("Cancelled."); };
+    $("#CancelButton").on('click', (event) => { OnCancel(); });
+    $(document).ready(function () {
+        var formActionUrl = '@Model.CurrentUrl'; // Set the URL from the model
+
+      
+        $("#createChannelForm").validate({
+            rules: {
+                Name: {
+                    required: true
+                },
+                ServerId: {
+                    required: true
+                }
+            },
+            messages: {
+                Name: {
+                    required: "Channel name is required."
+                },
+                ServerId: {
+                    required: "Server Id is required."
+                }
+            },
+            errorPlacement: function (error, element) {
+                $("#errorMessages").html("");
+               error.appendTo("#errorMessages");
+               
+            },
+            invalidHandler: function (event, validator) {
+                // Show the div only if there are errors
+                var errors = validator.numberOfInvalids();
+                if (errors) {
+                    $("#errorMessages").show();
+                } else {
+                    $("#errorMessages").hide();
+                }
+            }
+        });
+
+        $("#createChannelForm").submit(function (event) {
+            event.preventDefault(); // Prevent the default form submission
+           
+            $(this).validate(); // This initializes validation if it hasn't been already
+            if (!$(this).valid()) {
+                return; // If the form is not valid, don't proceed with the AJAX call
+            }
+
+            var formData = new FormData(this);
+
+            $.ajax({
+                url: formActionUrl, // Set the URL to your page handler
+                type: 'POST',
+                data: formData,
+                processData: false, // tell jQuery not to process the data
+                contentType: false, // tell jQuery not to set contentType
+                success: function (response) {
+                    OnOK();
+                    // Handle success (e.g., display a success message or redirect)
+                },
+                error: function (xhr, status, error) {
+                    console.error("Submission failed: ", status, xhr.responseText);
+                    $("#errorMessages").html(xhr.responseText);
+                    $("#errorMessages").show();
+
+                    // Handle failure (e.g., display an error message)
+                }
+            });
+        });
+    });
+</script>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

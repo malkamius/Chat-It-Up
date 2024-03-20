@@ -62,7 +62,7 @@ public partial class CIUDataDbContext : DbContext
 
         modelBuilder.Entity<ServerChannel>(entity =>
         {
-            entity.HasNoKey();
+            entity.HasKey(e => e.Id);
 
             entity.Property(e => e.Name).HasMaxLength(50);
         });

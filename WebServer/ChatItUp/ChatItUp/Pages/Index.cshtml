@@ -156,7 +156,7 @@
             <span id="serverInviteCode"></span>
         </div>
     </div>
-    <div id="channelList">
+    <div id="channelList" style="min-width: 300px">
         <!-- Channels will be listed here -->
        
         <!-- Add more channels as needed -->
@@ -215,6 +215,30 @@
     async function showModalDeleteServer(ServerId) {
         $.ajax({
             url: "/DeleteServer?ServerId=" + ServerId, // Adjust the URL as needed
+            success: function (response) {
+                $("#modalContent").html(response);
+                $("#modalBackdrop, #modalContent").show();
+                window.OnOK = function () {
+
+                    fetchServers();
+                    $("#modalBackdrop, #modalContent").hide();
+
+                };
+
+                window.OnCancel = function () {
+                    $("#modalBackdrop, #modalContent").hide();
+                };
+            },
+            error: function () {
+                alert("Failed to load the form.");
+            }
+        });
+
+    }
+
+    async function showModalCreateChannel(ServerId) {
+        $.ajax({
+            url: "/CreateChannel?serverId=" + ServerId, // Adjust the URL as needed
             success: function (response) {
                 $("#modalContent").html(response);
                 $("#modalBackdrop, #modalContent").show();

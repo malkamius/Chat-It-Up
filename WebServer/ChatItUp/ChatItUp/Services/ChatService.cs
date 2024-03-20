@@ -43,6 +43,7 @@ namespace ChatItUp.Services
 
             public string ImageUrl { get; set; }
 
+            public bool IsOwner { get; set; }
         }
 
         public class Channel
@@ -71,7 +72,7 @@ namespace ChatItUp.Services
                 ///api/chat/GetRecentMessages?channelId=
                 return await _context.UserServers.Include(us => us.Server)
                     .Where(us => us.UserId == userId && (us.Server.DeletedOn == null || us.Server.DeletedOn == DateTime.MinValue))
-                    .Select(us => new Server { Id = us.Server.Id, Name = us.Server.Name, ImageUrl = "api/ServerImage/GetServerImage?ServerId=" + us.ServerId.ToString() })
+                    .Select(us => new Server { Id = us.Server.Id, Name = us.Server.Name, ImageUrl = "api/ServerImage/GetServerImage?ServerId=" + us.ServerId.ToString(), IsOwner = us.Server.ServerOwner == userId })
                     .ToListAsync();
             }
             catch(Exception ex)
