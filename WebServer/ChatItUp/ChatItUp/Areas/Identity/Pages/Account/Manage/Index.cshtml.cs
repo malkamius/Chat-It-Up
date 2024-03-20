@@ -128,11 +128,14 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
             
             if(Input.DisplayName != displayName)
             {
-                var conflict = _context.Users.FirstOrDefault(u => u.DisplayName.ToLower() == newDisplayName.ToLower());
-                if (conflict != null)
+                if (!string.IsNullOrEmpty(newDisplayName))
                 {
-                    StatusMessage = "That display name is already taken.";
-                    return RedirectToPage();
+                    var conflict = _context.Users.FirstOrDefault(u => u.DisplayName.ToLower() == newDisplayName.ToLower());
+                    if (conflict != null)
+                    {
+                        StatusMessage = "That display name is already taken.";
+                        return RedirectToPage();
+                    }
                 }
                 if (!string.IsNullOrEmpty(newDisplayName))
                 {
