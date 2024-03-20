@@ -62,6 +62,9 @@ connection.on("ReceiveAudioChunk", async base64AudioChunk => {
     }
 });
 
+connection.on("ServerRemoved", async serverId => {
+    await fetchServers();
+});
 
 // Function to toggle the connection status display
 function toggleConnectionStatus(isConnected) {
@@ -211,8 +214,18 @@ function selectServer(serverId) {
         if (server.dataset.serverId === serverId) {
             server.classList.add('selected-server');
         }
+        
     });
 
+    fetch(`/api/GetServerInviteCode/GetInvite?serverId=${serverId}`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('serverInviteCode').textContent = `${window.location.protocol}//${window.location.host}` + "/UseInvite?InviteCode=" + data.inviteCode;
+        })
+        .catch(error => {
+            console.error('Error fetching invite code:', error);
+            document.getElementById('serverInviteCode').textContent = 'Error fetching invite code.';
+        });
     // Simulate fetching channels for the selected server
     // Replace this part with an actual API call if necessary
     channels = fetchChannelsForServer(serverId);

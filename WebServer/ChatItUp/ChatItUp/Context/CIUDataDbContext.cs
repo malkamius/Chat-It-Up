@@ -54,8 +54,10 @@ public partial class CIUDataDbContext : DbContext
         modelBuilder.Entity<Server>(entity =>
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
-            entity.Property(e => e.CreatedOn).HasColumnType("datetime");
+            entity.Property(e => e.CreatedOn).HasColumnType("datetime2(7)");
             entity.Property(e => e.Name).HasMaxLength(256);
+            entity.Property(e => e.Image).HasColumnType("varbinary(max)"); ;
+            entity.Property(e => e.DeletedOn).HasColumnType("datetime2(7)").IsRequired(false);
         });
 
         modelBuilder.Entity<ServerChannel>(entity =>
@@ -67,8 +69,7 @@ public partial class CIUDataDbContext : DbContext
 
         modelBuilder.Entity<ServerInviteCode>(entity =>
         {
-            entity.HasNoKey();
-
+            entity.HasKey(e => new { e.InviteCode });
             entity.Property(e => e.ExpiresOn).HasColumnType("datetime");
         });
 

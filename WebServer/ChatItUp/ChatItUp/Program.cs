@@ -5,8 +5,21 @@ using ChatItUp.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Console;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.AddConsole(options =>
+{
+    options.FormatterName = ConsoleFormatterNames.Simple;
+});
+
+builder.Services.Configure<SimpleConsoleFormatterOptions>(options =>
+{
+    options.IncludeScopes = true;
+    options.TimestampFormat = "HH:mm:ss ";
+});
+
 var services = builder.Services;
 var configuration = builder.Configuration;
 // Add services to the container.

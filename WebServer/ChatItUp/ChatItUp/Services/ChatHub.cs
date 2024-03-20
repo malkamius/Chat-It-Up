@@ -8,6 +8,7 @@ using System.Text;
 using System.Xml.Linq;
 using OggVorbisEncoder;
 using MimeKit.Encodings;
+using NuGet.Protocol;
 
 namespace ChatItUp.Services
 {
@@ -23,6 +24,17 @@ namespace ChatItUp.Services
             _chatService = chatService;
 
         }
+
+        //public async Task NotifyRemoveServer(Guid serverId)
+        //{
+        //    await Clients.Users(from usid in (await _chatService.GetUsersForServer(serverId)) select usid.ToString()).SendAsync("UpdateServers", serverId);
+        //}
+
+        //public async Task NotifyRemoveChannel(Guid channelId)
+        //{
+        //    await Clients.Users(from usid in (await _chatService.GetUsersForChannel(channelId)) select usid.ToString()).SendAsync("RemoveChannel", channelId);
+        //}
+
         public async Task SendMessage(string channelId, string message)
         {
             Guid userId = Guid.Empty;

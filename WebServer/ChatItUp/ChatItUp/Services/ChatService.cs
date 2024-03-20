@@ -18,10 +18,12 @@ namespace ChatItUp.Services
     public class ChatService
     {
         private readonly CIUDataDbContext _context;
+        private readonly ILogger<ChatService> _logger;
 
-        public ChatService(CIUDataDbContext context)
+        public ChatService(CIUDataDbContext context, ILogger<ChatService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public class Message
@@ -64,11 +66,19 @@ namespace ChatItUp.Services
 
         public async Task<List<Server>> GetServers(Guid userId)
         {
-            ///api/chat/GetRecentMessages?channelId=
-            return await _context.UserServers
-                .Where(us => us.UserId == userId)
-                .Select(us => new Server { Id = us.Server.Id, Name = us.Server.Name, ImageUrl = "api/ServerImage/GetServerImage?ServerId=" + us.ServerId.ToString() })
-                .ToListAsync();
+            try
+            {
+                ///api/chat/GetRecentMessages?channelId=
+                return await _context.UserServers.Include(us => us.Server)
+                    .Where(us => us.UserId == userId && (us.Server.DeletedOn == null || us.Server.DeletedOn == DateTime.MinValue))
+                    .Select(us => new Server { Id = us.Server.Id, Name = us.Server.Name, ImageUrl = "api/ServerImage/GetServerImage?ServerId=" + us.ServerId.ToString() })
+                    .ToListAsync();
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+                return new List<Server>();
+            }
         }
 
         public async Task<List<Channel>> GetChannels(Guid userId, Guid serverId)
@@ -164,6 +174,25 @@ namespace ChatItUp.Services
 
                 // Return the stream as a file
                 return ms.ToArray();
+            }
+        }
+
+        internal async Task<IEnumerable<Guid>> GetUsersForServer(Guid serverId)
+        {
+            return await (from us in _context.UserServers where us.ServerId == serverId select us.UserId).ToListAsync();
+        }
+
+        internal async Task<IEnumerable<Guid>> GetUsersForChannel(Guid channelId)
+        {
+            var channel = _context.ServerChannels.FirstOrDefault(c => c.Id == channelId);
+
+            if (channel != null)
+            {
+                return await (from us in _context.UserServers where us.ServerId == channel.ServerId select us.UserId).ToListAsync();
+            } 
+            else
+            {
+                return Enumerable.Empty<Guid>();
             }
         }
     }

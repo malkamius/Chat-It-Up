@@ -10,13 +10,15 @@ public partial class Server
 
     public string Name { get; set; } = null!;
 
-    public string? Description { get; set; }
+    public string? Description { get; set; } = null;
 
     public DateTime CreatedOn { get; set; }
 
     public Guid ServerOwner { get; set; }
 
     public byte[]? Image { get; set; } = null;
+
+    public DateTime? DeletedOn { get; set; } = null;
 
     public virtual ICollection<UserServer> UserServers { get; set; } = new List<UserServer>();
 }
