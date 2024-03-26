@@ -78,6 +78,7 @@ public partial class CIUDataDbContext : DbContext
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.Property(e => e.EmailAddress).HasMaxLength(255);
             entity.Property(e => e.DisplayName).HasMaxLength(16).IsRequired(false);
+            entity.Property(e => e.Status).HasMaxLength(16).IsRequired(false);
         });
 
         modelBuilder.Entity<UserServer>(entity =>

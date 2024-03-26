@@ -204,5 +204,15 @@ namespace ChatItUp.Services
                 return Enumerable.Empty<Guid>();
             }
         }
+
+        internal async Task SetStatusAsync(Guid userId, string v)
+        {
+            var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+            user.Status = v;
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+        }
+
+        internal async Task<User> GetUser(Guid userId) => await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
     }
 }

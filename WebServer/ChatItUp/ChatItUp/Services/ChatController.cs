@@ -45,5 +45,6 @@ namespace ChatItUp.Services
             var messages = await _chatService.GetChannels(userId, serverId);
             return Ok(messages);
         }
+
     }
 }

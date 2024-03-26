@@ -119,6 +119,42 @@
         .context-menu ul li:hover {
             background-color: #f0f0f0;
         }
+
+        #userList div {
+            padding: 5px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        #toggleUserListBtn {
+            padding: 2px 5px; /* Reduce vertical padding */
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 16px; /* Adjust based on your content */
+            line-height: 1; /* Adjust line height to fit the content */
+            max-height: 20px;
+        }
+
+
+        #toggleUserListBtn:hover {
+            background-color: #0056b3;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Adjust spacing between elements */
+            margin-bottom: 10px; /* Space between user items */
+        }
+
+        .status-icon, .owner-icon {
+            width: 32px; /* Adjust size as needed */
+            height: 32px; /* Adjust size as needed */
+        }
     </style>
 }
 
@@ -167,6 +203,12 @@
         <div id="messages"></div>
         <input type="text" id="messageInput" style="width: 80%;" />
         <button id="sendButton">Send</button>
+    </div>
+
+    <button id="toggleUserListBtn">-</button>
+
+    <div id="userList" style="min-width: 200px; border-left: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: auto;">
+        <!-- User list for the selected server will be displayed here -->
     </div>
 </div>
 
@@ -310,6 +352,20 @@
         document.addEventListener('click', function (e) {
             if (!contextMenu.contains(e.target)) {
                 contextMenu.style.display = 'none';
+            }
+        });
+
+        document.getElementById('userList').style.display = 'block'; // Hide users list by default
+        document.getElementById('toggleUserListBtn').textContent = '-'; // Set initial button text
+
+        document.getElementById('toggleUserListBtn').addEventListener('click', function () {
+            const userList = document.getElementById('userList');
+            if (userList.style.display === 'none' || userList.style.display === '') {
+                userList.style.display = 'block'; // Show the users list
+                this.textContent = '-'; // Optional: Change button text
+            } else {
+                userList.style.display = 'none'; // Hide the users list
+                this.textContent = '+'; // Optional: Change button text
             }
         });
     });

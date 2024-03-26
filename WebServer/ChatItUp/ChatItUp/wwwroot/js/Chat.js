@@ -14,6 +14,14 @@ connection.on("ReceiveMessage", function (channelid, userid, message) {
     }
 });
 
+connection.on("UserConnected", function (serverId, userId, userDisplayName, userIsOwner) {
+    updateUserStatus(serverId, userId, userDisplayName, userIsOwner, "Online");
+});
+
+connection.on("UserDisconnected", function (serverId, userId, userDisplayName, userIsOwner) {
+    updateUserStatus(serverId, userId, userDisplayName, userIsOwner, "Offline");
+});
+
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
 let audioQueue = [];
@@ -266,7 +274,7 @@ function selectServer(serverId) {
     // Simulate fetching channels for the selected server
     // Replace this part with an actual API call if necessary
     channels = fetchChannelsForServer(serverId, isOwner);
-
+    fetchAndDisplayUsers(serverId);
 }
 
 async function fetchServers() {
@@ -335,6 +343,53 @@ function updateServerList(servers) {
 
 }
 
+async function fetchAndDisplayUsers(serverId) {
+    const userListDiv = document.getElementById('userList');
+    userListDiv.innerHTML = ''; // Clear the current list
+
+    try {
+        const response = await fetch(`/api/GetServerInfo/GetUsers?serverId=${serverId}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+        const users = await response.json();
+
+        users.forEach(user => {
+            updateUserStatus(serverId, user.id, user.displayName, user.isOwner, user.status)
+            //const userDiv = document.createElement('div');
+            //userDiv.classList.add('user-item'); // Add class for styling if needed
+
+            //// Status image
+            //const statusImg = document.createElement('img');
+            //statusImg.src = user.status === 'Online' ? '/image/online-image.png' : '/image/offline-image.png'; // Adjust paths as necessary
+            //statusImg.alt = user.status;
+            //statusImg.classList.add('status-icon'); // Add class for styling if needed
+
+            //userDiv.appendChild(statusImg);
+
+            //// Display name
+            //const displayNameSpan = document.createElement('span');
+            //displayNameSpan.textContent = user.displayName;
+            //userDiv.appendChild(displayNameSpan);
+
+            //// Owner image
+            //if (user.isOwner) {
+            //    const ownerImg = document.createElement('img');
+            //    ownerImg.src = '/image/owner-image.png'; // Adjust path as necessary
+            //    ownerImg.alt = 'Owner';
+            //    ownerImg.classList.add('owner-icon'); // Add class for styling if needed
+
+            //    userDiv.appendChild(ownerImg);
+            //}
+
+            //userListDiv.appendChild(userDiv);
+        });
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        userListDiv.innerHTML = '<p>Error fetching users.</p>';
+    }
+}
+
 let mediaRecorder = null;
 let audioChunks = [];
 let skip = 0;
@@ -385,6 +440,55 @@ async function sendAudioChunk(chunk) {
         // Assuming you have a SignalR connection setup as `connection`
         connection.invoke("SendAudioChunk", base64String);
     });
+}
+
+function updateUserStatus(serverId, userId, userDisplayName, isOwner, userStatus) {
+    if (serverId == selectedServerId) {
+        const userListDiv = document.getElementById('userList');
+        let userDiv = document.querySelector(`.user-item[data-user-id="${userId}"]`);
+
+        // If the user is already in the list, update their status
+        if (userDiv) {
+            const statusImg = userDiv.querySelector('.status-icon');
+            statusImg.src = userStatus === 'Online' ? '/image/online-image.png' : '/image/offline-image.png';
+        } else {
+            // If the user is not in the list and is connecting, add them
+            userDiv = document.createElement('div');
+            userDiv.classList.add('user-item');
+            userDiv.setAttribute('data-user-id', userId); // Useful for identification
+
+            // Assuming you have a way to fetch or already know the user's displayName
+            const displayName = "User's Display Name"; // Placeholder, replace with actual value
+
+            const statusImg = document.createElement('img');
+            statusImg.src = userStatus === 'Online' ? '/image/online-image.png' : '/image/offline-image.png'; // Adjust paths as necessary
+            statusImg.alt = userStatus;
+            statusImg.classList.add('status-icon'); // Add class for styling if needed
+
+            userDiv.appendChild(statusImg);
+
+            const displayNameSpan = document.createElement('span');
+            displayNameSpan.textContent = userDisplayName;
+
+            userDiv.appendChild(statusImg);
+            userDiv.appendChild(displayNameSpan);
+
+
+            // Owner image
+            if (isOwner) {
+                const ownerImg = document.createElement('img');
+                ownerImg.src = '/image/owner-image.png'; // Adjust path as necessary
+                ownerImg.alt = 'Owner';
+                ownerImg.classList.add('owner-icon'); // Add class for styling if needed
+
+                userDiv.appendChild(ownerImg);
+            }
+            // Optionally, add the owner image if the user is an owner
+            // This requires knowledge of whether the user is an owner at this point
+
+            userListDiv.appendChild(userDiv);
+        }
+    }
 }
 
 $(document).ready(function () {
