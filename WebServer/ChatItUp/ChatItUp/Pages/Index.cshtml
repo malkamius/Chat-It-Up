@@ -44,6 +44,10 @@
             margin-right: 2px;
         }
 
+        .panel-highlight {
+            border: 2px solid #007bff;
+        }
+
         #serverList {
             
             border-right: 1px solid #ddd;
@@ -387,6 +391,7 @@
             const panel = e.target.previousElementSibling; // Get the panel before the divider
             resizePanel = panel;
             startWidth = panel.offsetWidth;
+            resizePanel.classList.add('panel-highlight'); // Highlight the panel being resized
 
             document.documentElement.addEventListener('mousemove', doResize, false);
             document.documentElement.addEventListener('mouseup', stopResize, false);
@@ -402,6 +407,7 @@
         function stopResize() {
             document.documentElement.removeEventListener('mousemove', doResize, false);
             document.documentElement.removeEventListener('mouseup', stopResize, false);
+            resizePanel.classList.remove('panel-highlight'); // Remove highlight from the panel
         }
 
         const resizeChannelHandle = document.getElementById('resizeChannel');
