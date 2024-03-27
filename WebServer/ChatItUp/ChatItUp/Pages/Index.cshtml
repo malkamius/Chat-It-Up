@@ -320,6 +320,30 @@
 
     }
 
+    async function showModalLeaveServer(ServerId) {
+        $.ajax({
+            url: "/LeaveServer?ServerId=" + ServerId, // Adjust the URL as needed
+            success: function (response) {
+                $("#modalContent").html(response);
+                $("#modalBackdrop, #modalContent").show();
+                window.OnOK = function () {
+
+                    fetchServers();
+                    $("#modalBackdrop, #modalContent").hide();
+
+                };
+
+                window.OnCancel = function () {
+                    $("#modalBackdrop, #modalContent").hide();
+                };
+            },
+            error: function () {
+                alert("Failed to load the form.");
+            }
+        });
+
+    }
+
     async function showModalCreateChannel(ServerId) {
         $.ajax({
             url: "/CreateChannel?serverId=" + ServerId, // Adjust the URL as needed
@@ -404,7 +428,7 @@
                     contextMenu.setAttribute('data-server-is-owner', isOwner);
                     $("#contextMenu").html(
                         '<ul>' +
-                        (isOwner != "true"? '<li id="removeServer">Leave Server</li>' : "" ) +
+                        (isOwner != "true"? '<li id="leaveServer">Leave Server</li>' : "" ) +
                         (isOwner == "true" ? '<li id="deleteServer">Delete Server</li>' : '') +
                         (isOwner == "true" ? '<li id="createInvite">Create Invite</li>' : '') +
                         '</ul>');
@@ -421,6 +445,14 @@
                             const serverId = contextMenu.getAttribute('data-server-id');
                             console.log(`Deleting server ${serverId}`);
                             showModalDeleteServer(serverId);
+                            contextMenu.style.display = 'none';
+
+                        });
+                    } else {
+                        document.getElementById('leaveServer').addEventListener('click', function () {
+                            const serverId = contextMenu.getAttribute('data-server-id');
+                            console.log(`Leaving server ${serverId}`);
+                            showModalLeaveServer(serverId);
                             contextMenu.style.display = 'none';
 
                         });

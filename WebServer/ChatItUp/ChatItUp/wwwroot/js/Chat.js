@@ -22,6 +22,23 @@ connection.on("UserDisconnected", function (serverId, userId, userDisplayName, u
     updateUserStatus(serverId, userId, userDisplayName, userIsOwner, "Offline");
 });
 
+connection.on("UserLeft", function (serverId, userId) {
+    removeUser(serverId, userId);
+});
+
+connection.on("RemoveServer", function (serverId) {
+    removeServer(serverId);
+});
+
+connection.on("ServerAdded", async function (serverId, serverName, isOwner) {
+    selectedServerId = undefined;
+    selectedChannelId = undefined;
+    await fetchServers();
+    selectedServerId = undefined;
+    selectedChannelId = undefined;
+    selectServer(serverId);
+});
+
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
 let audioQueue = [];
@@ -196,21 +213,27 @@ async function fetchChannelsForServer(serverId, isServerOwner = false) {
     skipCount = 0; // Reset skip count for new channel
     messagesDiv.innerHTML = ''; // Clear existing messages
     channels = [];
-    if (loading) return;
+    if (loading) return channels;
     loading = true;
 
-    const response = await fetch(`/api/chat/GetChannels?serverId=${serverId}`);
-    if (response.ok) {
-        channels = await response.json();
-        updateChannelList(channels, serverId, isServerOwner);
+    if (serverId != "Hub" && serverId != "CreateServer") {
+        const response = await fetch(`/api/chat/GetChannels?serverId=${serverId}`);
+        if (response.ok) {
+            channels = await response.json();
+            updateChannelList(channels, serverId, isServerOwner);
 
+        } else {
+            console.error('Failed to fetch messages');
+        }
     } else {
-        console.error('Failed to fetch messages');
+        updateChannelList(channels, serverId, false);
     }
 
     loading = false;
     if (channels.length > 0)
         selectChannel(selectedChannelId ? selectedChannelId : channels[0].id);
+
+    return channels;
 }
 
 function updateChannelList(channels, serverId, isServerOwner) {
@@ -226,6 +249,7 @@ function updateChannelList(channels, serverId, isServerOwner) {
         channelDiv.setAttribute('data-server-is-owner', isServerOwner);
         channelDiv.onclick = function () { selectChannel(channel.id); };
         channelListDiv.appendChild(channelDiv);
+        if (channel.id == selectedChannelId || selectedChannelId == undefined) { selectChannel(channel.id); }
     });
 
     if (isServerOwner) {
@@ -233,7 +257,7 @@ function updateChannelList(channels, serverId, isServerOwner) {
         channelDiv.className = 'channel';
         //serverDiv.textContent = server.name;
         channelDiv.setAttribute('data-channel-id', 'CreateChannel');
-        
+
         const image = document.createElement('img');
         image.src = "/image/PlusSign.png"; // Assuming server object has an `imageUrl` property
         image.alt = 'Add channel';
@@ -252,7 +276,7 @@ function updateChannelList(channels, serverId, isServerOwner) {
     }
 }
 
-function selectServer(serverId) {
+async function selectServer(serverId) {
     if (selectedServerId != serverId) selectedChannelId = undefined;
     selectedServerId = serverId;
     let isOwner = false;
@@ -266,21 +290,23 @@ function selectServer(serverId) {
                 serverOwner = true;
             }
         }
-        
+
     });
 
-    fetch(`/api/GetServerInviteCode/GetInvite?serverId=${serverId}`)
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('serverInviteCode').textContent = `${window.location.protocol}//${window.location.host}` + "/UseInvite?InviteCode=" + data.inviteCode;
-        })
-        .catch(error => {
-            console.error('Error fetching invite code:', error);
-            document.getElementById('serverInviteCode').textContent = 'Error fetching invite code.';
-        });
-    // Simulate fetching channels for the selected server
-    // Replace this part with an actual API call if necessary
-    channels = fetchChannelsForServer(serverId, isOwner);
+    try {
+        fetch(`/api/GetServerInviteCode/GetInvite?serverId=${serverId}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('serverInviteCode').textContent = `${window.location.protocol}//${window.location.host}` + "/UseInvite?InviteCode=" + data.inviteCode;
+            })
+            .catch(error => {
+                console.error('Error fetching invite code:', error);
+                document.getElementById('serverInviteCode').textContent = 'Error fetching invite code.';
+            });
+    } catch { }
+    channels = await fetchChannelsForServer(serverId, isOwner);
+    updateChannelList(channels, serverId, isOwner);
+
     fetchAndDisplayUsers(serverId);
 }
 
@@ -301,7 +327,7 @@ async function fetchServers() {
     loading = false;
 
     if (servers.length > 0)
-        selectServer(selectedServerId ? selectedServerId : servers[0].id);
+        await selectServer(selectedServerId ? selectedServerId : servers[0].id);
 }
 
 function updateServerList(servers) {
@@ -323,7 +349,7 @@ function updateServerList(servers) {
 
     serverDiv.appendChild(image);
 
-    serverDiv.onclick = function () {  };
+    serverDiv.onclick = function () { };
 
     serverListDiv.appendChild(serverDiv);
 
@@ -344,7 +370,7 @@ function updateServerList(servers) {
 
         serverDiv.appendChild(image);
 
-        serverDiv.onclick = function () { selectServer(server.id); };
+        serverDiv.onclick = async function () { await selectServer(server.id); };
         serverListDiv.appendChild(serverDiv);
     });
 
@@ -441,6 +467,14 @@ async function sendAudioChunk(chunk) {
     });
 }
 
+function removeUser(serverId, userId) {
+    if (serverId == selectedServerId) {
+        const userListDiv = document.getElementById('userList');
+        let userDiv = document.querySelector(`.user-item[data-user-id="${userId}"]`);
+        userListDiv.removeChild(userDiv);
+    }
+}
+
 function updateUserStatus(serverId, userId, userDisplayName, isOwner, userStatus) {
     if (serverId == selectedServerId) {
         const userListDiv = document.getElementById('userList');
@@ -489,7 +523,17 @@ function updateUserStatus(serverId, userId, userDisplayName, isOwner, userStatus
         }
     }
 }
+function removeServer(serverId) {
+    
+    const serverListDiv = document.getElementById('serverList');
+    let serverDiv = document.querySelector(`.server[data-server-id="${serverId}"]`);
+    serverListDiv.removeChild(serverDiv);
 
+    if (serverId == selectedServerId) {
+        selectServer("Hub");
+    }
+    
+}
 $(document).ready(function () {
     messagesDiv = document.getElementById('messages');
     document.body.addEventListener('click', function () {

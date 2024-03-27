@@ -1,6 +1,8 @@
+using ChatItUp.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
 
 namespace ChatItUp.Pages
@@ -23,10 +25,12 @@ namespace ChatItUp.Pages
         [BindProperty]
         public bool AlreadyMember { get; set; }
 
+        private IHubContext<ChatHub> _hubContext;
 
-        public UseInviteModel(Context.CIUDataDbContext context)
+        public UseInviteModel(Context.CIUDataDbContext context, IHubContext<ChatHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task OnGetAsync()
@@ -41,7 +45,7 @@ namespace ChatItUp.Pages
                 if(invite != null) 
                 {
                     var server = _context.Servers.FirstOrDefault(s => s.Id == invite.ServerId);
-                    
+                    var user = _context.Users.First(u => u.Id == userId);
                     if (invite.ExpiresOn < DateTime.Now || server == null || server.DeletedOn.HasValue)
                     {
                         Successful = false;
@@ -59,8 +63,17 @@ namespace ChatItUp.Pages
                             _context.ServerInviteCodes.Update(invite);
                             await _context.UserServers.AddAsync(new Models.UserServer() { UserId = userId, JoinedOn = DateTime.Now, ServerId = invite.ServerId });
                             await _context.SaveChangesAsync();
+                            if (ChatHub.UserConnections.TryGetValue(userId, out var connections))
+                            {
+                                foreach (var connection in connections)
+                                    await _hubContext.Groups.AddToGroupAsync(connection, "server_" + server.Id.ToString());
+                            }
+                            await _hubContext.Clients.Group("server_" + server.Id.ToString()).SendAsync("UserConnected", server.Id, userId, user.DisplayName ?? user.EmailAddress, false);
+                            await _hubContext.Clients.User(userId.ToString()).SendAsync("ServerAdded", server.Id, server.Name, server.ServerOwner == userId);
+
                             Successful = true;
                         }
+                        
                     }
                 }
             }

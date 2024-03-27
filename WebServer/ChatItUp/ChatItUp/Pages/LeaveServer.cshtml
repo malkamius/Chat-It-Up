@@ -1,20 +1,16 @@
 ﻿@page
-@model ChatItUp.Pages.DeleteChannelModel
+@model ChatItUp.Pages.LeaveServerModel
 @{
     Layout = "_ModalDialogLayout";
 }
 
 <div id="errorMessages" class="alert alert-danger" style="display: none;"></div>
-<form id="DeleteChannelForm" method="post" enctype="multipart/form-data">
-    <div>Are you sure you want to delete the channel @Model.Name</div>
-    <div class="form-group">
-        <input type="checkbox" id="ConfirmDelete" name="ConfirmDelete" required>
-        <label for="ConfirmDelete">I confirm I want to delete the channel.</label>
-    </div>
+<form id="LeaveServerForm" method="post" enctype="multipart/form-data">
+    <div>Are you sure you want to leave the server @Model.Name</div>
     <button id="CancelButton" type="button" class="btn btn-primary">Cancel</button>
 
-    <input type="hidden" id="ChannelId" />
-    <button type="submit" class="btn btn-primary">Delete</button>
+    <input type="hidden" id="ServerId" />
+    <button type="submit" class="btn btn-primary">Leave</button>
 </form>
 
 <script>
@@ -25,17 +21,7 @@
     $(document).ready(function () {
         var formActionUrl = '@Model.CurrentUrl'; // Set the URL from the model
 
-        $("#DeleteChannelForm").validate({
-            rules: {
-                ConfirmDelete: {
-                    required: true
-                }                
-            },
-            messages: {
-                ConfirmDelete: {
-                    required: "You must check the confirmation box."
-                }
-            },
+        $("#LeaveServerForm").validate({
             errorPlacement: function (error, element) {
                 $("#errorMessages").html("");
                 error.appendTo("#errorMessages");
@@ -52,7 +38,7 @@
             }
         });
 
-        $("#DeleteChannelForm").submit(function (event) {
+        $("#LeaveServerForm").submit(function (event) {
             event.preventDefault(); // Prevent the default form submission
 
             $(this).validate(); // This initializes validation if it hasn't been already
@@ -73,7 +59,7 @@
                     // Handle success (e.g., display a success message or redirect)
                 },
                 error: function (xhr, status, error) {
-                    console.error("Delete channel failed: ", status, xhr.responseText);
+                    console.error("Delete server failed: ", status, xhr.responseText);
                     $("#errorMessages").html(xhr.responseText);
                     $("#errorMessages").show();
 

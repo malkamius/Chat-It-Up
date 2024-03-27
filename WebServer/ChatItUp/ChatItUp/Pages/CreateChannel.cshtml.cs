@@ -62,7 +62,7 @@ namespace ChatItUp.Pages
                 return BadRequest("You do not have permission.");
             }
            
-            var channelExists = _context.ServerChannels.Any(c => c.ServerId == server.Id && c.Name.Equals(Name.Trim()));
+            var channelExists = _context.ServerChannels.Any(c => c.ServerId == server.Id && c.DeletedOn == null && c.Name.Equals(Name.Trim()));
             
             if(channelExists)
             {

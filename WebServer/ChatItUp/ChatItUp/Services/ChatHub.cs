@@ -24,7 +24,7 @@ namespace ChatItUp.Services
         ChatService _chatService;
         private HtmlEncoder _htmlEncoder;
         private static readonly ConcurrentDictionary<Guid, int> UserConnectionCounts = new ConcurrentDictionary<Guid, int>();
-
+        public static readonly ConcurrentDictionary<Guid, List<string>> UserConnections = new ConcurrentDictionary<Guid, List<string>>();
         public ChatHub(ChatService chatService, HtmlEncoder htmlEncoder)
         {
             _chatService = chatService;
@@ -38,10 +38,12 @@ namespace ChatItUp.Services
             if (!string.IsNullOrEmpty(userIdString) && Guid.TryParse(userIdString, out var userId))
             {
                 var userCount = 0;
-                lock (UserConnectionCounts)
-                {
-                    userCount = UserConnectionCounts.AddOrUpdate(userId, 1, (id, count) => count + 1);
-                }
+                
+                userCount = UserConnectionCounts.AddOrUpdate(userId, 1, (id, count) => count + 1);
+                if(!UserConnections.TryAdd(userId, new List<string>()))
+                    if (UserConnections.TryGetValue(userId, out var connections))
+                        connections.Add(Context.ConnectionId);
+                
                 Console.WriteLine($"User {userId} connected. Connection count: {UserConnectionCounts[userId]}");
                 // Set user status to online if needed
                 if (userCount == 1)
@@ -67,10 +69,9 @@ namespace ChatItUp.Services
             if (!string.IsNullOrEmpty(userIdString) && Guid.TryParse(userIdString, out var userId))
             {
                 var newCount = 0;
-                lock (UserConnectionCounts)
-                {
-                    newCount = UserConnectionCounts.AddOrUpdate(userId, 0, (id, count) => Math.Max(count - 1, 0));
-                }
+                newCount = UserConnectionCounts.AddOrUpdate(userId, 0, (id, count) => Math.Max(count - 1, 0));
+                if (UserConnections.TryGetValue(userId, out var connections))
+                    connections.Remove(Context.ConnectionId);
                 Console.WriteLine($"User {userId} disconnected. Remaining connections: {newCount}");
 
                 if (newCount == 0)
