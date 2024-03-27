@@ -26,8 +26,8 @@ connection.on("UserLeft", function (serverId, userId) {
     removeUser(serverId, userId);
 });
 
-connection.on("RemoveServer", function (serverId) {
-    removeServer(serverId);
+connection.on("RemoveServer", async function (serverId) {
+    await removeServer(serverId);
 });
 
 connection.on("ServerAdded", async function (serverId, serverName, isOwner) {
@@ -36,7 +36,7 @@ connection.on("ServerAdded", async function (serverId, serverName, isOwner) {
     await fetchServers();
     selectedServerId = undefined;
     selectedChannelId = undefined;
-    selectServer(serverId);
+    await selectServer(serverId);
 });
 
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -107,7 +107,7 @@ connection.on("ChannelRemoved", async (channelId, serverId) => {
 });
 
 // Function to toggle the connection status display
-function toggleConnectionStatus(isConnected) {
+async function toggleConnectionStatus(isConnected) {
     const statusDiv = document.getElementById('connectionStatus');
     if (isConnected) {
         statusDiv.classList.remove('visible');
@@ -117,15 +117,15 @@ function toggleConnectionStatus(isConnected) {
         statusDiv.classList.add('visible');
 
         if (selectedChannelId) {
-            selectChannel(selectedChannelId);
+            await selectChannel(selectedChannelId);
         }
     }
 }
 
 // Monitor the connection status
 connection.onclose(async () => {
-    toggleConnectionStatus(false);
-    attemptReconnect();
+    await toggleConnectionStatus(false);
+    await attemptReconnect();
 });
 
 async function attemptReconnect() {
@@ -135,7 +135,7 @@ async function attemptReconnect() {
             await connection.start();
             console.log("Reconnected to the SignalR hub successfully.");
             isConnected = true;
-            toggleConnectionStatus(true);
+            await toggleConnectionStatus(true);
         } catch (err) {
             console.error("Reconnection attempt failed, retrying...", err);
             // Wait for 1 or 5 seconds before trying to reconnect
@@ -145,11 +145,11 @@ async function attemptReconnect() {
 }
 
 // Initially attempt to connect
-connection.start().then(function () {
-    toggleConnectionStatus(true);
-}).catch(function (err) {
+connection.start().then(async function () {
+    await toggleConnectionStatus(true);
+}).catch(async function (err) {
     console.error("Failed to connect SignalR hub on start.", err.toString());
-    toggleConnectionStatus(false);
+    await toggleConnectionStatus(false);
     attemptReconnect();
 });
 
@@ -170,6 +170,11 @@ function appendMessage(user, message, prepend = false, scroll = true) {
 }
 
 async function loadMessages(initial = false) {
+    if (selectedChannelId === undefined) {
+        skipCount = 0; // Reset skip count for new channel
+        messagesDiv.innerHTML = ''; // Clear existing messages
+        return;
+    }
     if (loading) return;
     loading = true;
 
@@ -193,7 +198,7 @@ async function loadMessages(initial = false) {
 
 
 
-function selectChannel(channelId) {
+async function selectChannel(channelId) {
     selectedChannelId = channelId;
     skipCount = 0; // Reset skip count for new channel
     messagesDiv.innerHTML = ''; // Clear existing messages
@@ -206,50 +211,55 @@ function selectChannel(channelId) {
     });
     skipCount = 0;
 
-    loadMessages(true); // Load messages for the selected channel
+    await loadMessages(true); // Load messages for the selected channel
 }
 
 async function fetchChannelsForServer(serverId, isServerOwner = false) {
     skipCount = 0; // Reset skip count for new channel
     messagesDiv.innerHTML = ''; // Clear existing messages
     channels = [];
-    if (loading) return channels;
+    //if (loading)
+   //     return channels;
     loading = true;
 
     if (serverId != "Hub" && serverId != "CreateServer") {
-        const response = await fetch(`/api/chat/GetChannels?serverId=${serverId}`);
-        if (response.ok) {
-            channels = await response.json();
-            updateChannelList(channels, serverId, isServerOwner);
+        try {
+            const response = await fetch(`/api/chat/GetChannels?serverId=${serverId}`);
+            if (response.ok) {
+                channels = await response.json();
+                await updateChannelList(channels, serverId, isServerOwner);
 
-        } else {
-            console.error('Failed to fetch messages');
+            } else {
+                console.error('Failed to fetch messages');
+            }
+        } catch(ex) {
+            console.error(ex);
         }
     } else {
-        updateChannelList(channels, serverId, false);
+        await updateChannelList(channels, serverId, false);
     }
 
     loading = false;
     if (channels.length > 0)
-        selectChannel(selectedChannelId ? selectedChannelId : channels[0].id);
+        await selectChannel(selectedChannelId ? selectedChannelId : channels[0].id);
 
     return channels;
 }
 
-function updateChannelList(channels, serverId, isServerOwner) {
+async function updateChannelList(channels, serverId, isServerOwner) {
     const channelListDiv = document.getElementById('channelList');
     channelListDiv.innerHTML = ''; // Clear existing channels
 
-    channels.forEach(channel => {
+    channels.forEach(async (channel) => {
         const channelDiv = document.createElement('div');
         channelDiv.className = 'channel';
         channelDiv.textContent = channel.name;
         channelDiv.setAttribute('data-channel-id', channel.id);
         channelDiv.setAttribute('data-server-id', serverId);
         channelDiv.setAttribute('data-server-is-owner', isServerOwner);
-        channelDiv.onclick = function () { selectChannel(channel.id); };
+        channelDiv.onclick = async function () { await selectChannel(channel.id); };
         channelListDiv.appendChild(channelDiv);
-        if (channel.id == selectedChannelId || selectedChannelId == undefined) { selectChannel(channel.id); }
+        if (channel.id == selectedChannelId || selectedChannelId == undefined) channelDiv.classList.add('selected-channel'); //{ await selectChannel(channel.id); }
     });
 
     if (isServerOwner) {
@@ -305,7 +315,7 @@ async function selectServer(serverId) {
             });
     } catch { }
     channels = await fetchChannelsForServer(serverId, isOwner);
-    updateChannelList(channels, serverId, isOwner);
+    await updateChannelList(channels, serverId, isOwner);
 
     fetchAndDisplayUsers(serverId);
 }
@@ -523,18 +533,18 @@ function updateUserStatus(serverId, userId, userDisplayName, isOwner, userStatus
         }
     }
 }
-function removeServer(serverId) {
+async function removeServer(serverId) {
     
     const serverListDiv = document.getElementById('serverList');
     let serverDiv = document.querySelector(`.server[data-server-id="${serverId}"]`);
     serverListDiv.removeChild(serverDiv);
 
     if (serverId == selectedServerId) {
-        selectServer("Hub");
+        await selectServer("Hub");
     }
     
 }
-$(document).ready(function () {
+$(document).ready(async function () {
     messagesDiv = document.getElementById('messages');
     document.body.addEventListener('click', function () {
         if (audioContext.state === 'suspended') {
@@ -545,12 +555,12 @@ $(document).ready(function () {
         ToggleAudio();
     });
 
-    messagesDiv.addEventListener('scroll', () => {
+    messagesDiv.addEventListener('scroll', async () => {
         isScrolledToTop = messagesDiv.scrollTop === (messagesDiv.clientHeight - messagesDiv.scrollHeight);
 
         // Check if scrolled to the top
         if (isScrolledToTop && !loading) {
-            loadMessages();
+            await loadMessages();
         }
     });
 
