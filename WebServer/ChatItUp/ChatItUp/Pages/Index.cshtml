@@ -51,7 +51,6 @@
         }
 
         #serverList {
-            
             border-right: 1px solid #ddd;
             padding: 10px;
             width: 120px;
@@ -82,9 +81,9 @@
             cursor: pointer;
         }
 
-        .server:hover, .channel:hover {
-            background-color: #f0f0f0;
-        }
+            .server:hover, .channel:hover {
+                background-color: #f0f0f0;
+            }
 
         .selected-server, .selected-channel {
             background-color: #ddd; /* Background color for selected server/channel */
@@ -95,9 +94,9 @@
             transition: transform 0.2s; /* Animation for hover effect */
         }
 
-        .server img:hover {
-            transform: scale(1.1); /* Slightly enlarges the thumbnail on hover */
-        }
+            .server img:hover {
+                transform: scale(1.1); /* Slightly enlarges the thumbnail on hover */
+            }
 
         #messages {
             flex-grow: 1;
@@ -120,20 +119,20 @@
             box-shadow: 0px 0px 5px #aaa;
         }
 
-        .context-menu ul {
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
+            .context-menu ul {
+                list-style: none;
+                margin: 0;
+                padding: 0;
+            }
 
-        .context-menu ul li {
-            padding: 10px;
-            cursor: pointer;
-        }
+                .context-menu ul li {
+                    padding: 10px;
+                    cursor: pointer;
+                }
 
-        .context-menu ul li:hover {
-            background-color: #f0f0f0;
-        }
+                    .context-menu ul li:hover {
+                        background-color: #f0f0f0;
+                    }
 
         #userList div {
             padding: 5px;
@@ -155,9 +154,9 @@
         }
 
 
-        #toggleUserListBtn:hover {
-            background-color: #0056b3;
-        }
+            #toggleUserListBtn:hover {
+                background-color: #0056b3;
+            }
 
         .user-item {
             display: flex;
@@ -173,7 +172,6 @@
 
         #messageContainer {
             min-width: 303px;
-
         }
 
         #messageInputContainer {
@@ -184,7 +182,7 @@
         }
 
         #messageInput {
-            resize: vertical; 
+            resize: vertical;
             width: calc(100% - 50px); /* Adjusts width to fill available space, accounting for button width and potential padding/margin */
             margin-right: 10px; /* Adds some space between the textarea and the button */
             flex-grow: 1; /* Allows the textarea to grow and fill the available space */
@@ -215,29 +213,23 @@
 <div id="connectionStatus" class="hidden">Disconnected - Attempting to reconnect...</div>
 
 <div id="contextMenu" class="context-menu">
-    <ul>
-        <li id="createInvite">Create Invite Code</li>
-        <li id="deleteServer">Delete Server</li>
-    </ul>
 </div>
 
 <span style="align-content:center"><input id="AudioCheckbox" type="checkbox" /> Audio</span>
 
 <div class="chat-container">
     <div>
-    
+
         <div id="serverList">
             <!-- Servers will be listed here -->
-        
             <!-- Add more servers as needed -->
-       
+
         </div>
-        
+
     </div>
-    
+
     <div id="channelList">
         <!-- Channels will be listed here -->
-       
         <!-- Add more channels as needed -->
     </div>
     <div id="resizeChannel" class="resize-handle"></div>
@@ -263,12 +255,12 @@
 </div>
 
 <script>
-    
+
 
     // Sending a message
     document.getElementById("sendButton").addEventListener("click", function (event) {
         var user = "User"; // You might want to use a more dynamic way to get the user's name
-        if (selectedServerId && selectedChannelId) { 
+        if (selectedServerId && selectedChannelId) {
             var message = document.getElementById("messageInput").value;
             connection.invoke("SendMessage", selectedChannelId, message).catch(function (err) {
                 return console.error(err.toString());
@@ -278,8 +270,8 @@
         }
     });
 
-    
-    
+
+
     async function showModalCreateServer() {
         $.ajax({
             url: "/CreateServer", // Adjust the URL as needed
@@ -351,7 +343,31 @@
         });
 
     }
-    
+
+    async function showModalDeleteChannel(ChannelId) {
+        $.ajax({
+            url: "/DeleteChannel?ChannelId=" + ChannelId, // Adjust the URL as needed
+            success: function (response) {
+                $("#modalContent").html(response);
+                $("#modalBackdrop, #modalContent").show();
+                window.OnOK = function () {
+
+                    fetchServers();
+                    $("#modalBackdrop, #modalContent").hide();
+
+                };
+
+                window.OnCancel = function () {
+                    $("#modalBackdrop, #modalContent").hide();
+                };
+            },
+            error: function () {
+                alert("Failed to load the form.");
+            }
+        });
+
+    }
+
     $(document).ready(function () {
         contextMenu = document.getElementById('contextMenu');
 
@@ -361,23 +377,6 @@
                 contextMenu.style.display = 'none';
             }
         });
-
-        // Option click handler
-        document.getElementById('createInvite').addEventListener('click', function () {
-            const serverId = contextMenu.getAttribute('data-server-id');
-            console.log(`Creating invite for server ${serverId}`);
-            // Implement your code to create an invite code here
-            contextMenu.style.display = 'none';
-        });
-
-        document.getElementById('deleteServer').addEventListener('click', function () {
-            const serverId = contextMenu.getAttribute('data-server-id');
-            console.log(`Deleting server ${serverId}`);
-            showModalDeleteServer(serverId);
-            contextMenu.style.display = 'none';
-
-        });
-        
 
         // Assuming contextMenu is correctly defined and selected earlier in your script
         document.getElementById('serverList').addEventListener('contextmenu', function (e) {
@@ -394,7 +393,77 @@
 
                 // Set the server ID for later actions
                 const serverId = target.getAttribute('data-server-id');
-                contextMenu.setAttribute('data-server-id', serverId);
+                const isOwner = target.getAttribute('data-server-is-owner');
+
+                if (serverId == "Hub" || serverId == "CreateServer") {
+                    contextMenu.style.display = 'none';
+                    return;
+                } else {
+
+                    contextMenu.setAttribute('data-server-id', serverId);
+                    contextMenu.setAttribute('data-server-is-owner', isOwner);
+                    $("#contextMenu").html(
+                        '<ul>' +
+                        (isOwner != "true"? '<li id="removeServer">Leave Server</li>' : "" ) +
+                        (isOwner == "true" ? '<li id="deleteServer">Delete Server</li>' : '') +
+                        (isOwner == "true" ? '<li id="createInvite">Create Invite</li>' : '') +
+                        '</ul>');
+
+                    if (isOwner == "true") {
+                        document.getElementById('createInvite').addEventListener('click', function () {
+                            const serverId = contextMenu.getAttribute('data-server-id');
+                            console.log(`Creating invite for server ${serverId}`);
+                            // Implement your code to create an invite code here
+                            contextMenu.style.display = 'none';
+                        });
+
+                        document.getElementById('deleteServer').addEventListener('click', function () {
+                            const serverId = contextMenu.getAttribute('data-server-id');
+                            console.log(`Deleting server ${serverId}`);
+                            showModalDeleteServer(serverId);
+                            contextMenu.style.display = 'none';
+
+                        });
+                    }
+                }
+            }
+        });
+
+        document.getElementById('channelList').addEventListener('contextmenu', function (e) {
+            e.preventDefault(); // Prevent the default context menu
+            let target = e.target;
+            while (target != null && !target.classList.contains('channel')) {
+                target = target.parentNode; // Ensure we're getting the .server div even if an img or child element is clicked
+            }
+            if (target) {
+                // Show and position the custom context menu
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${e.pageX}px`;
+                contextMenu.style.top = `${e.pageY}px`;
+
+                // Set the server ID for later actions
+                const channelId = target.getAttribute('data-channel-id');
+                const serverId = target.getAttribute('data-server-id');
+                const isOwner = target.getAttribute('data-server-is-owner');
+
+                if (isOwner != 'true' || channelId == "CreateChannel") {
+                    contextMenu.style.display = 'none';
+                    return;
+                } else {
+                    contextMenu.setAttribute('data-server-id', serverId);
+                    contextMenu.setAttribute('data-server-is-owner', isOwner);
+                    contextMenu.setAttribute('data-channel-id', channelId);
+                    $("#contextMenu").html(
+                        '<ul><li id="removeChannel">Remove Channel</li></ul>');
+
+                    document.getElementById('removeChannel').addEventListener('click', function () {
+                        const channelId = contextMenu.getAttribute('data-channel-id');
+                        console.log(`Deleting channel ${channelId}`);
+                        showModalDeleteChannel(channelId);
+                        contextMenu.style.display = 'none';
+
+                    });
+                }
             }
         });
 
@@ -452,6 +521,6 @@
         resizeChannelHandle.addEventListener('mousedown', initResize, false);
         resizeMessagesHandle.addEventListener('mousedown', initResize, false);
     });
-    
+
 </script>
 

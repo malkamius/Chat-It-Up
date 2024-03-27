@@ -13,6 +13,7 @@ using ChatItUp.webm;
 using System.Collections.Concurrent;
 using static ChatItUp.Services.ChatService;
 using SQLitePCL;
+using System.Text.Encodings.Web;
 
 namespace ChatItUp.Services
 {
@@ -21,13 +22,13 @@ namespace ChatItUp.Services
     {
         
         ChatService _chatService;
-
+        private HtmlEncoder _htmlEncoder;
         private static readonly ConcurrentDictionary<Guid, int> UserConnectionCounts = new ConcurrentDictionary<Guid, int>();
 
-        public ChatHub(ChatService chatService)
+        public ChatHub(ChatService chatService, HtmlEncoder htmlEncoder)
         {
             _chatService = chatService;
-
+            _htmlEncoder = htmlEncoder;
         }
 
         public override async Task OnConnectedAsync()
@@ -45,7 +46,7 @@ namespace ChatItUp.Services
                 // Set user status to online if needed
                 if (userCount == 1)
                 {
-                    var user = await _chatService.GetUser(userId);
+                    var user = await _chatService.GetUserAsync(userId);
                     await _chatService.SetStatusAsync(userId, "Online");
                     var servers = await _chatService.GetServers(userId);
                     foreach (var server in servers)
@@ -76,9 +77,9 @@ namespace ChatItUp.Services
                 {
                     UserConnectionCounts.TryRemove(userId, out _);
                     Console.WriteLine($"User {userId} set to offline.");
-                    var user = await _chatService.GetUser(userId);
+                    var user = await _chatService.GetUserAsync(userId);
                     await _chatService.SetStatusAsync(userId, "Offline");
-
+                    
                     var servers = await _chatService.GetServers(userId);
                     foreach (var server in servers)
                     {
@@ -106,6 +107,10 @@ namespace ChatItUp.Services
         public async Task SendMessage(string channelId, string message)
         {
             Guid userId = Guid.Empty;
+            if(string.IsNullOrEmpty(message) || string.IsNullOrEmpty((message = message.Trim())))
+            {
+                return;
+            }
             if (Context.User == null)
             {
                 await Clients.Caller.SendAsync("ReceiveMessage", channelId, "System", "Authorization failed.");
@@ -121,7 +126,10 @@ namespace ChatItUp.Services
                 }
                 else
                 {
-                    await Clients.All.SendAsync("ReceiveMessage", channelId, userId.ToString(), message);
+                    message = _htmlEncoder.Encode(message);
+                    var channel = await _chatService.GetChannelAsync(channelIdGuid);
+
+                    await Clients.Group("server_" + channel.ServerId.ToString()).SendAsync("ReceiveMessage", channelId, userId.ToString(), message);
                     await _chatService.SendMessageAsync(userId, channelIdGuid, message);
                 }
             }

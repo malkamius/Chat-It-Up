@@ -8,10 +8,10 @@ using System.Security.Claims;
 
 namespace ChatItUp.Pages
 {
-    public class DeleteServerModel : PageModel
+    public class DeleteChannelModel : PageModel
     {
         [BindProperty(SupportsGet = true)] // Add SupportsGet = true to allow binding on GET requests
-        public Guid? ServerId { get; set; } = Guid.Empty;
+        public Guid? ChannelId { get; set; } = Guid.Empty;
 
         public string Name { get; set; } = "";
         public string CurrentUrl => $"{Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}";
@@ -23,7 +23,7 @@ namespace ChatItUp.Pages
         private readonly IHubContext<ChatHub> _hubContext;
         private readonly ChatService _chatService;
 
-        public DeleteServerModel(Context.CIUDataDbContext context, IHubContext<ChatHub> hubContext, ChatService chatService)
+        public DeleteChannelModel(Context.CIUDataDbContext context, IHubContext<ChatHub> hubContext, ChatService chatService)
         {
             _context = context;
             _hubContext = hubContext;
@@ -34,42 +34,51 @@ namespace ChatItUp.Pages
         {
             Guid userId = Guid.Empty;
             Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
-            var server = _context.Servers.FirstOrDefault(s => s.ServerOwner == userId && s.Id == ServerId);
-            if (server == null)
+
+            if(!ChannelId.HasValue)
+            {
+                ModelState.AddModelError(string.Empty, "No channel was specified.");
+                return;
+            }
+
+            var channel = (from c in _context.ServerChannels join s in _context.Servers on c.ServerId equals s.Id where s.ServerOwner == userId && c.Id == ChannelId.Value select c).FirstOrDefault();
+
+            if (channel == null)
             {
                 ModelState.AddModelError(string.Empty, "You don't own that server.");
             }
             else
             {
-                Name = server.Name;
+                Name = channel.Name;
             }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
+            
             Guid userId = Guid.Empty;
             Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out userId);
-
-            if(!ServerId.HasValue)
+            
+            if(!ChannelId.HasValue)
             {
                 ModelState.AddModelError(string.Empty, "Server ID not set.");
                 return BadRequest("Server ID not set.");
             }
-            var server = _context.Servers.FirstOrDefault(s => s.ServerOwner == userId && s.Id == ServerId);
+            var channel = (from c in _context.ServerChannels join s in _context.Servers on c.ServerId equals s.Id where s.ServerOwner == userId && c.Id == ChannelId.Value select c).FirstOrDefault();
 
-            if (server == null)
+            if (channel == null)
             {
                 ModelState.AddModelError(string.Empty, "You don't own that server.");
                 return BadRequest("You don't own that server.");
             }
             else
             {
-                server.DeletedOn = DateTime.Now;
-                _context.Update(server);
+                channel.DeletedOn = DateTime.Now;
+                _context.Update(channel);
                 await _context.SaveChangesAsync();
-                await _hubContext.Clients.Users(from usid in (await _chatService.GetUsersForServer(ServerId.Value)) select usid.ToString()).SendAsync("ServerRemoved", ServerId.Value);
+                await _hubContext.Clients.Users(from usid in (await _chatService.GetUsersForServer(ChannelId.Value)) select usid.ToString()).SendAsync("ChannelRemoved", ChannelId.Value, channel.ServerId);
 
-                return new JsonResult(new { Message = "Server deleted." });
+                return new JsonResult(new { Message = "Channel deleted." });
             }
         }
     }

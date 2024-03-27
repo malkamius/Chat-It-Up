@@ -1,0 +1,85 @@
+﻿@page
+@model ChatItUp.Pages.DeleteChannelModel
+@{
+    Layout = "_ModalDialogLayout";
+}
+
+<div id="errorMessages" class="alert alert-danger" style="display: none;"></div>
+<form id="DeleteServerForm" method="post" enctype="multipart/form-data">
+    <div>Are you sure you want to delete the server @Model.Name</div>
+    <div class="form-group">
+        <input type="checkbox" id="ConfirmDelete" name="ConfirmDelete" required>
+        <label for="ConfirmDelete">I confirm I want to delete the server</label>
+    </div>
+    <button id="CancelButton" type="button" class="btn btn-primary">Cancel</button>
+
+    <input type="hidden" id="ServerId" />
+    <button type="submit" class="btn btn-primary">Delete</button>
+</form>
+
+<script>
+    window.OnOK = function () { alert("Success."); };
+    window.OnCancel = function () { alert("Cancelled."); };
+    $("#CancelButton").on('click', (event) => { OnCancel(); });
+
+    $(document).ready(function () {
+        var formActionUrl = '@Model.CurrentUrl'; // Set the URL from the model
+
+        $("#DeleteServerForm").validate({
+            rules: {
+                ConfirmDelete: {
+                    required: true
+                }                
+            },
+            messages: {
+                ConfirmDelete: {
+                    required: "You must check the confirmation box."
+                }
+            },
+            errorPlacement: function (error, element) {
+                $("#errorMessages").html("");
+                error.appendTo("#errorMessages");
+
+            },
+            invalidHandler: function (event, validator) {
+                // Show the div only if there are errors
+                var errors = validator.numberOfInvalids();
+                if (errors) {
+                    $("#errorMessages").show();
+                } else {
+                    $("#errorMessages").hide();
+                }
+            }
+        });
+
+        $("#DeleteServerForm").submit(function (event) {
+            event.preventDefault(); // Prevent the default form submission
+
+            $(this).validate(); // This initializes validation if it hasn't been already
+            if (!$(this).valid()) {
+                return; // If the form is not valid, don't proceed with the AJAX call
+            }
+
+            var formData = new FormData(this);
+
+            $.ajax({
+                url: formActionUrl, // Set the URL to your page handler
+                type: 'POST',
+                data: formData,
+                processData: false, // tell jQuery not to process the data
+                contentType: false, // tell jQuery not to set contentType
+                success: function (response) {
+                    OnOK();
+                    // Handle success (e.g., display a success message or redirect)
+                },
+                error: function (xhr, status, error) {
+                    console.error("Delete server failed: ", status, xhr.responseText);
+                    $("#errorMessages").html(xhr.responseText);
+                    $("#errorMessages").show();
+
+                    // Handle failure (e.g., display an error message)
+                }
+            });
+        });
+    });
+</script>

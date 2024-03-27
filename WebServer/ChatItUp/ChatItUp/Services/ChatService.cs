@@ -28,7 +28,7 @@ namespace ChatItUp.Services
 
         public class Message
         {
-            public Guid Channel { get; set; }
+            public Guid? Channel { get; set; }
             public Guid Id { get; set; }
             public string User { get; set; }
             public string Body { get; set; }
@@ -104,7 +104,7 @@ namespace ChatItUp.Services
 
             // User is a member, proceed to fetch and return channels for the server
             return await _context.ServerChannels
-                .Where(sc => sc.ServerId == serverId)
+                .Where(sc => sc.ServerId == serverId && sc.DeletedOn == null)
                 .Select(sc => new Channel { ServerId = sc.ServerId, Id = sc.Id, Name = sc.Name })
                 .ToListAsync();
         }
@@ -213,6 +213,11 @@ namespace ChatItUp.Services
             await _context.SaveChangesAsync();
         }
 
-        internal async Task<User> GetUser(Guid userId) => await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        internal async Task<User?> GetUserAsync(Guid userId) => await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+
+        internal async Task<Channel?> GetChannelAsync(Guid channelId) {
+            var serverchannel = await _context.ServerChannels.FirstOrDefaultAsync(c => c.Id == channelId);
+            return serverchannel != null? new Channel() { Id = serverchannel.Id, ServerId  = serverchannel.ServerId, Name = serverchannel.Name } : null;
+        }
     }
 }

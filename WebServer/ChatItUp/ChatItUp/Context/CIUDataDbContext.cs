@@ -64,8 +64,9 @@ public partial class CIUDataDbContext : DbContext
         modelBuilder.Entity<ServerChannel>(entity =>
         {
             entity.HasKey(e => e.Id);
-
+            entity.Property(e => e.ServerId);
             entity.Property(e => e.Name).HasMaxLength(50);
+            entity.Property(e => e.DeletedOn).IsRequired(false);
         });
 
         modelBuilder.Entity<ServerInviteCode>(entity =>

@@ -10,4 +10,7 @@ public partial class ServerChannel
     public Guid Id { get; set; }
 
     public string Name { get; set; } = null!;
+
+    public DateTime? DeletedOn { get; set; } = null;
+
 }

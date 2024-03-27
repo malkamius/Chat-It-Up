@@ -17,10 +17,13 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly Context.CIUDataDbContext _context;
+        private readonly HtmlEncoder _htmlEncoder;
+
         public IndexModel(
             UserManager<IdentityUser> userManager,
             SignInManager<IdentityUser> signInManager,
-            Context.CIUDataDbContext context)
+            Context.CIUDataDbContext context,
+            HtmlEncoder htmlEncoder)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -121,7 +124,7 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
 
             string newDisplayName = null;
             if (!string.IsNullOrEmpty(Input.DisplayName) && !string.IsNullOrEmpty(Input.DisplayName.Trim()))
-                newDisplayName = Input.DisplayName.Trim();
+                newDisplayName = _htmlEncoder.Encode(Input.DisplayName.Trim());
             
 
             var displayName = dataUser.DisplayName;

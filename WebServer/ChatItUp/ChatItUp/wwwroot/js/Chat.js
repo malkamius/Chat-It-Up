@@ -80,7 +80,12 @@ connection.on("ServerRemoved", async serverId => {
 connection.on("ChannelAdded", async (serverId, channelId) => {
     if (selectedServerId == serverId) {
         await fetchChannelsForServer(serverId, serverOwner);
-        
+    }
+});
+
+connection.on("ChannelRemoved", async (channelId, serverId) => {
+    if (selectedServerId == serverId) {
+        await fetchChannelsForServer(serverId, serverOwner);
     }
 });
 
@@ -217,6 +222,8 @@ function updateChannelList(channels, serverId, isServerOwner) {
         channelDiv.className = 'channel';
         channelDiv.textContent = channel.name;
         channelDiv.setAttribute('data-channel-id', channel.id);
+        channelDiv.setAttribute('data-server-id', serverId);
+        channelDiv.setAttribute('data-server-is-owner', isServerOwner);
         channelDiv.onclick = function () { selectChannel(channel.id); };
         channelListDiv.appendChild(channelDiv);
     });
@@ -225,8 +232,8 @@ function updateChannelList(channels, serverId, isServerOwner) {
         const channelDiv = document.createElement('div');
         channelDiv.className = 'channel';
         //serverDiv.textContent = server.name;
-        channelDiv.setAttribute('data-channel-id', '*');
-
+        channelDiv.setAttribute('data-channel-id', 'CreateChannel');
+        
         const image = document.createElement('img');
         image.src = "/image/PlusSign.png"; // Assuming server object has an `imageUrl` property
         image.alt = 'Add channel';
@@ -304,7 +311,7 @@ function updateServerList(servers) {
     let serverDiv = document.createElement('div');
     serverDiv.className = 'server';
     //serverDiv.textContent = server.name;
-    serverDiv.setAttribute('data-server-id', 'hub');
+    serverDiv.setAttribute('data-server-id', 'Hub');
 
     let image = document.createElement('img');
     image.src = "/image/hub-image.png"; // Assuming server object has an `imageUrl` property
@@ -344,7 +351,7 @@ function updateServerList(servers) {
     serverDiv = document.createElement('div');
     serverDiv.className = 'server';
     //serverDiv.textContent = server.name;
-    serverDiv.setAttribute('data-server-id', '+');
+    serverDiv.setAttribute('data-server-id', 'CreateServer');
 
     image = document.createElement('img');
     image.src = "/image/PlusSign.png"; // Assuming server object has an `imageUrl` property
@@ -375,33 +382,6 @@ async function fetchAndDisplayUsers(serverId) {
 
         users.forEach(user => {
             updateUserStatus(serverId, user.id, user.displayName, user.isOwner, user.status)
-            //const userDiv = document.createElement('div');
-            //userDiv.classList.add('user-item'); // Add class for styling if needed
-
-            //// Status image
-            //const statusImg = document.createElement('img');
-            //statusImg.src = user.status === 'Online' ? '/image/online-image.png' : '/image/offline-image.png'; // Adjust paths as necessary
-            //statusImg.alt = user.status;
-            //statusImg.classList.add('status-icon'); // Add class for styling if needed
-
-            //userDiv.appendChild(statusImg);
-
-            //// Display name
-            //const displayNameSpan = document.createElement('span');
-            //displayNameSpan.textContent = user.displayName;
-            //userDiv.appendChild(displayNameSpan);
-
-            //// Owner image
-            //if (user.isOwner) {
-            //    const ownerImg = document.createElement('img');
-            //    ownerImg.src = '/image/owner-image.png'; // Adjust path as necessary
-            //    ownerImg.alt = 'Owner';
-            //    ownerImg.classList.add('owner-icon'); // Add class for styling if needed
-
-            //    userDiv.appendChild(ownerImg);
-            //}
-
-            //userListDiv.appendChild(userDiv);
         });
     } catch (error) {
         console.error('Error fetching users:', error);
