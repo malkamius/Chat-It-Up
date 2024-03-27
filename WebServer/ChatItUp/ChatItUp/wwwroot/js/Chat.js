@@ -301,14 +301,33 @@ function updateServerList(servers) {
     const serverListDiv = document.getElementById('serverList');
     serverListDiv.innerHTML = ''; // Clear existing channels
 
+    let serverDiv = document.createElement('div');
+    serverDiv.className = 'server';
+    //serverDiv.textContent = server.name;
+    serverDiv.setAttribute('data-server-id', 'hub');
+
+    let image = document.createElement('img');
+    image.src = "/image/hub-image.png"; // Assuming server object has an `imageUrl` property
+    image.alt = 'Create new server';
+    image.style.width = '64px';
+    image.style.height = '64px';
+    image.style.borderRadius = '50%'; // Makes the image circular
+    image.title = 'Hub'; // Tooltip
+
+    serverDiv.appendChild(image);
+
+    serverDiv.onclick = function () {  };
+
+    serverListDiv.appendChild(serverDiv);
+
     servers.forEach(server => {
-        const serverDiv = document.createElement('div');
+        serverDiv = document.createElement('div');
         serverDiv.className = 'server';
         //serverDiv.textContent = server.name;
         serverDiv.setAttribute('data-server-id', server.id);
         serverDiv.setAttribute('data-server-is-owner', server.isOwner);
 
-        const image = document.createElement('img');
+        image = document.createElement('img');
         image.src = server.imageUrl; // Assuming server object has an `imageUrl` property
         image.alt = server.name;
         image.style.width = '64px';
@@ -322,12 +341,12 @@ function updateServerList(servers) {
         serverListDiv.appendChild(serverDiv);
     });
 
-    const serverDiv = document.createElement('div');
+    serverDiv = document.createElement('div');
     serverDiv.className = 'server';
     //serverDiv.textContent = server.name;
-    serverDiv.setAttribute('data-server-id', '*');
+    serverDiv.setAttribute('data-server-id', '+');
 
-    const image = document.createElement('img');
+    image = document.createElement('img');
     image.src = "/image/PlusSign.png"; // Assuming server object has an `imageUrl` property
     image.alt = 'Create new server';
     image.style.width = '64px';

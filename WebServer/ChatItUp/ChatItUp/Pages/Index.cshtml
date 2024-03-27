@@ -34,6 +34,8 @@
         .chat-container {
             display: flex;
             align-items: stretch;
+            min-height: 300px;
+            max-height: 80vh;
         }
 
         .resize-handle {
@@ -51,17 +53,19 @@
         #serverList {
             
             border-right: 1px solid #ddd;
-            padding: 10px, 10px, 10px, 10px;
-            width: 95px;
-            height: 300px; /* Adjust based on your layout */
-            overflow-y: auto;
+            padding: 10px;
+            width: 120px;
+            min-height: 300px;
+            max-height: 80vh;
+            overflow: auto;
         }
 
         #channelList {
             min-width: 150px;
             border-right: 1px solid #ddd;
             padding: 5px;
-            height: 300px; /* Adjust based on your layout */
+            min-height: 300px;
+            max-height: 80vh;
             overflow-y: auto;
         }
 
@@ -166,6 +170,35 @@
             width: 32px; /* Adjust size as needed */
             height: 32px; /* Adjust size as needed */
         }
+
+        #messageContainer {
+            min-width: 303px;
+
+        }
+
+        #messageInputContainer {
+            display: flex;
+            align-items: flex-start; /* Aligns items to the start of the cross axis (top of the container) */
+            width: 100%; /* Takes the full width of its parent */
+            padding: 10px; /* Optional: Adds some spacing around the inner elements */
+        }
+
+        #messageInput {
+            resize: vertical; 
+            width: calc(100% - 50px); /* Adjusts width to fill available space, accounting for button width and potential padding/margin */
+            margin-right: 10px; /* Adds some space between the textarea and the button */
+            flex-grow: 1; /* Allows the textarea to grow and fill the available space */
+            box-sizing: border-box; /* Includes padding and border in the element's total width and height */
+            max-height: 50vh;
+            min-height: 50px;
+        }
+
+        #sendButton {
+            white-space: nowrap; /* Prevents the text inside the button from wrapping */
+            padding: 8px 8px; /* Adjust padding to match the height of the textarea */
+            height: 50px;
+            align-self: start; /* Aligns the button to the top of the container */
+        }
     </style>
 }
 
@@ -208,11 +241,13 @@
         <!-- Add more channels as needed -->
     </div>
     <div id="resizeChannel" class="resize-handle"></div>
-    <div>
+    <div id="messageContainer">
         <!-- Existing message-related elements -->
         <div id="messages"></div>
-        <input type="text" id="messageInput" style="width: 80%;" />
-        <button id="sendButton">Send</button>
+        <div id="messageInputContainer">
+            <textarea id="messageInput" rows="3"></textarea>
+            <button id="sendButton">Send</button>
+        </div>
     </div>
 
     <div id="resizeMessages" class="resize-handle"></div>
