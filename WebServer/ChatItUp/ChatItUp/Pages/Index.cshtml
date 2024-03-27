@@ -33,36 +33,44 @@
 
         .chat-container {
             display: flex;
+            align-items: stretch;
         }
 
-        #channelList {
-            width: 20%;
-            border-right: 1px solid #ddd;
-            padding: 10px;
-            height: 300px; /* Adjust based on your layout */
-            overflow-y: auto;
+        .resize-handle {
+            background: #ccc;
+            cursor: ew-resize;
+            width: 2px;
+            margin-left: 2px;
+            margin-right: 2px;
         }
 
         #serverList {
             
             border-right: 1px solid #ddd;
             padding: 10px, 10px, 10px, 10px;
+            width: 95px;
             height: 300px; /* Adjust based on your layout */
             overflow-y: auto;
         }
 
         #channelList {
-            width: 20%;
+            min-width: 150px;
             border-right: 1px solid #ddd;
-            padding: 10px;
+            padding: 5px;
             height: 300px; /* Adjust based on your layout */
             overflow-y: auto;
         }
 
-        .server, .channel {
+        .server {
             border: 1px solid #aaa;
             padding: 5px;
-            margin-bottom: 5px;
+            cursor: pointer;
+        }
+
+        .channel {
+            border: 1px solid #aaa;
+            padding: 5px;
+            margin-bottom: 2px;
             cursor: pointer;
         }
 
@@ -75,7 +83,6 @@
         }
 
         .server img {
-            padding-right: 5px;
             cursor: pointer;
             transition: transform 0.2s; /* Animation for hover effect */
         }
@@ -188,16 +195,15 @@
             <!-- Add more servers as needed -->
        
         </div>
-        <div style="max-width: 300px;">
-            <span id="serverInviteCode"></span>
-        </div>
+        
     </div>
-    <div id="channelList" style="min-width: 300px">
+    
+    <div id="channelList">
         <!-- Channels will be listed here -->
        
         <!-- Add more channels as needed -->
     </div>
-
+    <div id="resizeChannel" class="resize-handle"></div>
     <div>
         <!-- Existing message-related elements -->
         <div id="messages"></div>
@@ -205,11 +211,16 @@
         <button id="sendButton">Send</button>
     </div>
 
+    <div id="resizeMessages" class="resize-handle"></div>
+
     <button id="toggleUserListBtn">-</button>
 
     <div id="userList" style="min-width: 200px; border-left: 1px solid #ddd; padding: 10px; height: 300px; overflow-y: auto;">
         <!-- User list for the selected server will be displayed here -->
     </div>
+</div>
+<div>
+    <span id="serverInviteCode"></span>
 </div>
 
 <script>
@@ -368,6 +379,37 @@
                 this.textContent = '+'; // Optional: Change button text
             }
         });
+
+        let startX, startWidth;
+        let resizePanel;
+        function initResize(e) {
+            startX = e.clientX;
+            const panel = e.target.previousElementSibling; // Get the panel before the divider
+            resizePanel = panel;
+            startWidth = panel.offsetWidth;
+
+            document.documentElement.addEventListener('mousemove', doResize, false);
+            document.documentElement.addEventListener('mouseup', stopResize, false);
+        }
+
+        function doResize(e) {
+            //const panel = this.querySelector('.resize-handle').previousElementSibling; // Panel before the divider
+            //const panel = e.srcElement.previousElementSibling; // Panel before the divider
+            const newWidth = startWidth + e.clientX - startX;
+            resizePanel.style.width = `${newWidth}px`;
+        }
+
+        function stopResize() {
+            document.documentElement.removeEventListener('mousemove', doResize, false);
+            document.documentElement.removeEventListener('mouseup', stopResize, false);
+        }
+
+        const resizeChannelHandle = document.getElementById('resizeChannel');
+        const resizeMessagesHandle = document.getElementById('resizeMessages');
+
+        // Initialize the resizable functionality
+        resizeChannelHandle.addEventListener('mousedown', initResize, false);
+        resizeMessagesHandle.addEventListener('mousedown', initResize, false);
     });
     
 </script>
