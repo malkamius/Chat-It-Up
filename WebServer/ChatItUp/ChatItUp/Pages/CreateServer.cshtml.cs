@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing.Imaging;
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 
 namespace ChatItUp.Pages
 {
@@ -29,11 +30,12 @@ namespace ChatItUp.Pages
         public IFormFile? UploadedImage { get; set; } = null;
 
         Context.CIUDataDbContext _context;
+        private HtmlEncoder _htmlEncoder;
 
-        public CreateServerModel(Context.CIUDataDbContext context)
+        public CreateServerModel(Context.CIUDataDbContext context, HtmlEncoder htmlEncoder)
         {
             _context = context;
-
+            _htmlEncoder = htmlEncoder;
         }
 
         public void OnGet()
@@ -165,7 +167,16 @@ namespace ChatItUp.Pages
                 //return Page();
                 return BadRequest("There was an error with the data submitted.");
             }
+            if (string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(Name.Trim())) {
+                ModelState.AddModelError("Name", "Name is required.");
+                //return Page();
+                return BadRequest("Name is required.");
+            }
+            Name = _htmlEncoder.Encode(Name.Trim());
 
+            if (!string.IsNullOrEmpty(Description) && !string.IsNullOrEmpty(Description.Trim())) {
+                Description = _htmlEncoder.Encode(Description.Trim());
+            }
             
             var ServerInfo = new Models.Server() { CreatedOn = DateTime.Now, Description = Description, Id = Guid.NewGuid(), Image = serverImageBytes, Name = Name, ServerOwner = userId };
             var UserServerInfo = new Models.UserServer() { JoinedOn = DateTime.Now, ServerId = ServerInfo.Id, UserId = userId };

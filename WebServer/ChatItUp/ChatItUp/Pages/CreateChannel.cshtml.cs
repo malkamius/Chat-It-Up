@@ -8,6 +8,7 @@ using Org.BouncyCastle.Tls;
 using System.ComponentModel.DataAnnotations;
 using System.Drawing.Imaging;
 using System.Security.Claims;
+using System.Text.Encodings.Web;
 
 namespace ChatItUp.Pages
 {
@@ -28,11 +29,14 @@ namespace ChatItUp.Pages
         Context.CIUDataDbContext _context;
         IHubContext<ChatHub> _hubContext;
         ChatService _chatService;
-        public CreateChannelModel(Context.CIUDataDbContext context, IHubContext<ChatHub> hubContext, ChatService chatService)
+        private HtmlEncoder _htmlEncoder;
+
+        public CreateChannelModel(Context.CIUDataDbContext context, IHubContext<ChatHub> hubContext, ChatService chatService, HtmlEncoder htmlEncoder)
         {
             _context = context;
             _hubContext = hubContext;
             _chatService = chatService;
+            _htmlEncoder = htmlEncoder;
         }
 
         public void OnGet()
@@ -61,7 +65,13 @@ namespace ChatItUp.Pages
                 //return Page();
                 return BadRequest("You do not have permission.");
             }
-           
+            
+            if(string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(Name.Trim())) {
+                ModelState.AddModelError("Name", "Name is required.");
+                //return Page();
+                return BadRequest("Name is required.");
+            }
+            Name = _htmlEncoder.Encode(Name.Trim());
             var channelExists = _context.ServerChannels.Any(c => c.ServerId == server.Id && c.DeletedOn == null && c.Name.Equals(Name.Trim()));
             
             if(channelExists)
