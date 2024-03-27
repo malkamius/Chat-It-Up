@@ -47,6 +47,7 @@ public partial class CIUDataDbContext : DbContext
         modelBuilder.Entity<Message>(entity =>
         {
             entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.ChannelId).IsRequired(false);
             entity.Property(e => e.Body).HasColumnName("Body");
             entity.Property(e => e.SentOn).HasColumnType("datetime");
         });
