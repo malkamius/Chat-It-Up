@@ -87,7 +87,7 @@ namespace ChatItUp.Pages
                 return BadRequest("There was an error with the data submitted.");
             }
 
-            var channel = new Models.Channel() { Id = Guid.NewGuid(), ServerId = ServerId, Name = Name };
+            var channel = new Models.Channel() { Id = Guid.NewGuid(), ServerId = ServerId, @Type = "Server", Name = Name, CreatedOn = DateTime.Now };
             await _context.Channels.AddAsync(channel);
             await _context.SaveChangesAsync();
 
