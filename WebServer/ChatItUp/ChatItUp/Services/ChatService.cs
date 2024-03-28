@@ -30,8 +30,8 @@ namespace ChatItUp.Services
         {
             public Guid? Channel { get; set; }
             public Guid Id { get; set; }
-            public string User { get; set; }
-            public string Body { get; set; }
+            public string User { get; set; } = string.Empty;
+            public string Body { get; set; } = string.Empty;
             public DateTime SentOn { get; set; }
 
         }
@@ -39,18 +39,18 @@ namespace ChatItUp.Services
         public class Server
         {
             public Guid Id { get; set; }
-            public string Name { get; set; }
+            public string Name { get; set; } = string.Empty;
 
-            public string ImageUrl { get; set; }
+            public string ImageUrl { get; set; } = string.Empty;
 
             public bool IsOwner { get; set; }
         }
 
         public class Channel
         {
-            public Guid ServerId { get; set; }
+            public Guid? ServerId { get; set; }
             public Guid Id { get; set; }
-            public string Name { get; set; }
+            public string Name { get; set; } = string.Empty;
         }
         public async Task<List<Message>> GetRecentMessagesAsync(Guid userId, Guid channelId, int skip = 0)
         {
@@ -103,7 +103,7 @@ namespace ChatItUp.Services
             }
 
             // User is a member, proceed to fetch and return channels for the server
-            return await _context.ServerChannels
+            return await _context.Channels
                 .Where(sc => sc.ServerId == serverId && sc.DeletedOn == null)
                 .Select(sc => new Channel { ServerId = sc.ServerId, Id = sc.Id, Name = sc.Name })
                 .ToListAsync();
@@ -111,7 +111,7 @@ namespace ChatItUp.Services
 
         internal async Task<bool> HasAccessToChannelAsync(Guid userId, Guid channelId)
         {
-            var channel = await _context.ServerChannels.FirstOrDefaultAsync(i => i.Id == channelId);
+            var channel = await _context.Channels.FirstOrDefaultAsync(i => i.Id == channelId);
             if (channel == null) return false;
 
             return await _context.UserServers.AnyAsync(i => i.UserId == userId && i.ServerId == channel.ServerId);
@@ -137,7 +137,7 @@ namespace ChatItUp.Services
             var server = _context.UserServers.Include(us => us.Server) // Ensure Server is eagerly loaded
                 .FirstOrDefault(us => us.UserId == userId && us.ServerId == serverId);
 
-            
+#if WINDOWS
             // Create an image in memory
             using (var bitmap = new Bitmap(64, 64))
             using (var g = Graphics.FromImage(bitmap))
@@ -184,6 +184,9 @@ namespace ChatItUp.Services
                 // Return the stream as a file
                 return ms.ToArray();
             }
+#else
+            return new byte[] { };
+#endif
         }
 
         internal async Task<IEnumerable<Guid>> GetUsersForServer(Guid serverId)
@@ -193,7 +196,7 @@ namespace ChatItUp.Services
 
         internal async Task<IEnumerable<Guid>> GetUsersForChannel(Guid channelId)
         {
-            var channel = _context.ServerChannels.FirstOrDefault(c => c.Id == channelId);
+            var channel = _context.Channels.FirstOrDefault(c => c.Id == channelId);
 
             if (channel != null)
             {
@@ -207,7 +210,7 @@ namespace ChatItUp.Services
 
         internal async Task SetStatusAsync(Guid userId, string v)
         {
-            var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+            var user = _context.Users.First(u => u.Id == userId);
             user.Status = v;
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
@@ -216,7 +219,7 @@ namespace ChatItUp.Services
         internal async Task<User?> GetUserAsync(Guid userId) => await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
 
         internal async Task<Channel?> GetChannelAsync(Guid channelId) {
-            var serverchannel = await _context.ServerChannels.FirstOrDefaultAsync(c => c.Id == channelId);
+            var serverchannel = await _context.Channels.FirstOrDefaultAsync(c => c.Id == channelId);
             return serverchannel != null? new Channel() { Id = serverchannel.Id, ServerId  = serverchannel.ServerId, Name = serverchannel.Name } : null;
         }
     }

@@ -1,4 +1,4 @@
-﻿using OggVorbisEncoder;
+﻿//using OggVorbisEncoder;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ChatItUp.webm
@@ -6,238 +6,239 @@ namespace ChatItUp.webm
     public static class ParseAudio
     {
         static readonly int WriteBufferSize = 512;
+        public static byte[] ParseWebMChunk(byte[] data) => new byte[] {};
 
-        public static byte[] ParseWebMChunk(byte[] data)
-        {
-            using (var outstream = new MemoryStream())
-            using (var stream = new MemoryStream(data))
-            {
-                long pos = 0;
-                while (stream.Position < stream.Length)
-                {
+    //    public static byte[] ParseWebMChunk(byte[] data)
+    //    {
+    //        using (var outstream = new MemoryStream())
+    //        using (var stream = new MemoryStream(data))
+    //        {
+    //            long pos = 0;
+    //            while (stream.Position < stream.Length)
+    //            {
 
-                    long length = 0;
-                    var size = ReadUInt(stream, pos, ref length);
+    //                long length = 0;
+    //                var size = ReadUInt(stream, pos, ref length);
 
-                    pos += length;
-                    var tracknumber = ReadUInt(stream, pos, ref length);
-                    pos += length;
-                    pos += 2;
-                    stream.Position = pos;
+    //                pos += length;
+    //                var tracknumber = ReadUInt(stream, pos, ref length);
+    //                pos += length;
+    //                pos += 2;
+    //                stream.Position = pos;
 
-                    var marker = 0;
+    //                var marker = 0;
 
-                    if (stream.Position < stream.Length && data[stream.Position] == 128)
-                        marker = stream.ReadByte();
-                    if (size <= 4 || stream.Position + size > stream.Length)
-                    {
-                        pos = stream.Position + 1;
-                        continue;
-                    }
-                    var buffer = new byte[size - 4];
-                    var read = stream.Read(buffer, 0, buffer.Length);
-
-
-                    pos = stream.Position + 1;
+    //                if (stream.Position < stream.Length && data[stream.Position] == 128)
+    //                    marker = stream.ReadByte();
+    //                if (size <= 4 || stream.Position + size > stream.Length)
+    //                {
+    //                    pos = stream.Position + 1;
+    //                    continue;
+    //                }
+    //                var buffer = new byte[size - 4];
+    //                var read = stream.Read(buffer, 0, buffer.Length);
 
 
-                    var totalbuffer = buffer;
-                    using (var decoder = FragLabs.Audio.Codecs.OpusDecoder.Create(48000, 1))
-                    {
-                        decoder.MaxDataBytes = 48000;
-
-                        var newbuffer = new byte[0];
-                        try
-                        {
-                            if (tracknumber == 1)
-                            {
-                                var decoded = decoder.Decode(totalbuffer, totalbuffer.Length, out var decodedlength);
-                                outstream.Write(decoded, 0, decodedlength);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.ToString());
-                        }
-                    }
-                }
-
-                var oggBytes = ConvertRawPCMFile(48000, 1, outstream.ToArray(), 2, 48000, 1);
-                return oggBytes;
-            }
-        }
-
-        static long ReadUInt(Stream stream, long pos, ref long len)
-        {
-            if (stream == null || pos < 0)
-                return -1;
-
-            len = 1;
-            stream.Position = pos;
-            var b = stream.ReadByte();
+    //                pos = stream.Position + 1;
 
 
-            if (b == 0)  // we can't handle u-int values larger than 8 bytes
-                return -1;
+    //                var totalbuffer = buffer;
+    //                using (var decoder = FragLabs.Audio.Codecs.OpusDecoder.Create(48000, 1))
+    //                {
+    //                    decoder.MaxDataBytes = 48000;
 
-            byte m = 0x80;
+    //                    var newbuffer = new byte[0];
+    //                    try
+    //                    {
+    //                        if (tracknumber == 1)
+    //                        {
+    //                            var decoded = decoder.Decode(totalbuffer, totalbuffer.Length, out var decodedlength);
+    //                            outstream.Write(decoded, 0, decodedlength);
+    //                        }
+    //                    }
+    //                    catch (Exception ex)
+    //                    {
+    //                        Console.WriteLine(ex.ToString());
+    //                    }
+    //                }
+    //            }
 
-            while ((b & m) == 0)
-            {
-                m >>= 1;
-                ++len;
-            }
+    //            var oggBytes = ConvertRawPCMFile(48000, 1, outstream.ToArray(), 2, 48000, 1);
+    //            return oggBytes;
+    //        }
+    //    }
 
-            long result = b & (~m);
-            ++pos;
+    //    static long ReadUInt(Stream stream, long pos, ref long len)
+    //    {
+    //        if (stream == null || pos < 0)
+    //            return -1;
 
-            for (int i = 1; i < len; ++i)
-            {
-                b = stream.ReadByte();
+    //        len = 1;
+    //        stream.Position = pos;
+    //        var b = stream.ReadByte();
 
-                result <<= 8;
-                result |= b;
 
-                ++pos;
-            }
-            return result;
-        }
+    //        if (b == 0)  // we can't handle u-int values larger than 8 bytes
+    //            return -1;
 
-        static byte[] ConvertRawPCMFile(int outputSampleRate, int outputChannels, byte[] pcmSamples, short pcmSampleSize, int pcmSampleRate, int pcmChannels)
-        {
-            int numPcmSamples = (pcmSamples.Length / (int)pcmSampleSize / pcmChannels);
-            float pcmDuraton = numPcmSamples / (float)pcmSampleRate;
+    //        byte m = 0x80;
 
-            int numOutputSamples = (int)(pcmDuraton * outputSampleRate);
-            //Ensure that samble buffer is aligned to write chunk size
-            numOutputSamples = (numOutputSamples / WriteBufferSize) * WriteBufferSize;
+    //        while ((b & m) == 0)
+    //        {
+    //            m >>= 1;
+    //            ++len;
+    //        }
 
-            float[][] outSamples = new float[outputChannels][];
+    //        long result = b & (~m);
+    //        ++pos;
 
-            for (int ch = 0; ch < outputChannels; ch++)
-            {
-                outSamples[ch] = new float[numOutputSamples];
-            }
+    //        for (int i = 1; i < len; ++i)
+    //        {
+    //            b = stream.ReadByte();
 
-            for (int sampleNumber = 0; sampleNumber < numOutputSamples; sampleNumber++)
-            {
-                float rawSample = 0.0f;
+    //            result <<= 8;
+    //            result |= b;
 
-                for (int ch = 0; ch < outputChannels; ch++)
-                {
-                    int sampleIndex = (sampleNumber * pcmChannels) * (int)pcmSampleSize;
+    //            ++pos;
+    //        }
+    //        return result;
+    //    }
 
-                    if (ch < pcmChannels) sampleIndex += (ch * (int)pcmSampleSize);
+    //    static byte[] ConvertRawPCMFile(int outputSampleRate, int outputChannels, byte[] pcmSamples, short pcmSampleSize, int pcmSampleRate, int pcmChannels)
+    //    {
+    //        int numPcmSamples = (pcmSamples.Length / (int)pcmSampleSize / pcmChannels);
+    //        float pcmDuraton = numPcmSamples / (float)pcmSampleRate;
 
-                    switch (pcmSampleSize)
-                    {
-                        case 1:
-                            rawSample = ByteToSample(pcmSamples[sampleIndex]);
-                            break;
-                        case 2:
-                            rawSample = ShortToSample((short)(pcmSamples[sampleIndex + 1] << 8 | pcmSamples[sampleIndex]));
-                            break;
-                        case 4: // Handling 32-bit samples
-                            int intSample = (int)(
-                                (pcmSamples[sampleIndex + 3] << 24) |
-                                (pcmSamples[sampleIndex + 2] << 16) |
-                                (pcmSamples[sampleIndex + 1] << 8) |
-                                pcmSamples[sampleIndex]
-                            );
-                            rawSample = IntToSample(intSample);
-                            break;
-                    }
+    //        int numOutputSamples = (int)(pcmDuraton * outputSampleRate);
+    //        //Ensure that samble buffer is aligned to write chunk size
+    //        numOutputSamples = (numOutputSamples / WriteBufferSize) * WriteBufferSize;
 
-                    outSamples[ch][sampleNumber] = rawSample;
-                }
-            }
+    //        float[][] outSamples = new float[outputChannels][];
 
-            return GenerateFile(outSamples, outputSampleRate, outputChannels);
-        }
-        static float IntToSample(int intSample)
-        {
-            return intSample / (float)Int32.MaxValue;
-        }
+    //        for (int ch = 0; ch < outputChannels; ch++)
+    //        {
+    //            outSamples[ch] = new float[numOutputSamples];
+    //        }
 
-        static byte[] GenerateFile(float[][] floatSamples, int sampleRate, int channels)
-        {
-            using MemoryStream outputData = new MemoryStream();
+    //        for (int sampleNumber = 0; sampleNumber < numOutputSamples; sampleNumber++)
+    //        {
+    //            float rawSample = 0.0f;
 
-            // Stores all the static vorbis bitstream settings
-            var info = VorbisInfo.InitVariableBitRate(channels, sampleRate, 1f);
+    //            for (int ch = 0; ch < outputChannels; ch++)
+    //            {
+    //                int sampleIndex = (sampleNumber * pcmChannels) * (int)pcmSampleSize;
 
-            // set up our packet->stream encoder
-            var serial = new Random().Next();
-            var oggStream = new OggStream(serial);
+    //                if (ch < pcmChannels) sampleIndex += (ch * (int)pcmSampleSize);
 
-            // =========================================================
-            // HEADER
-            // =========================================================
-            // Vorbis streams begin with three headers; the initial header (with
-            // most of the codec setup parameters) which is mandated by the Ogg
-            // bitstream spec.  The second header holds any comment fields.  The
-            // third header holds the bitstream codebook.
+    //                switch (pcmSampleSize)
+    //                {
+    //                    case 1:
+    //                        rawSample = ByteToSample(pcmSamples[sampleIndex]);
+    //                        break;
+    //                    case 2:
+    //                        rawSample = ShortToSample((short)(pcmSamples[sampleIndex + 1] << 8 | pcmSamples[sampleIndex]));
+    //                        break;
+    //                    case 4: // Handling 32-bit samples
+    //                        int intSample = (int)(
+    //                            (pcmSamples[sampleIndex + 3] << 24) |
+    //                            (pcmSamples[sampleIndex + 2] << 16) |
+    //                            (pcmSamples[sampleIndex + 1] << 8) |
+    //                            pcmSamples[sampleIndex]
+    //                        );
+    //                        rawSample = IntToSample(intSample);
+    //                        break;
+    //                }
 
-            var comments = new Comments();
-            comments.AddTag("ARTIST", "TEST");
+    //                outSamples[ch][sampleNumber] = rawSample;
+    //            }
+    //        }
 
-            var infoPacket = HeaderPacketBuilder.BuildInfoPacket(info);
-            var commentsPacket = HeaderPacketBuilder.BuildCommentsPacket(comments);
-            var booksPacket = HeaderPacketBuilder.BuildBooksPacket(info);
+    //        return GenerateFile(outSamples, outputSampleRate, outputChannels);
+    //    }
+    //    static float IntToSample(int intSample)
+    //    {
+    //        return intSample / (float)Int32.MaxValue;
+    //    }
 
-            oggStream.PacketIn(infoPacket);
-            oggStream.PacketIn(commentsPacket);
-            oggStream.PacketIn(booksPacket);
+    //    static byte[] GenerateFile(float[][] floatSamples, int sampleRate, int channels)
+    //    {
+    //        using MemoryStream outputData = new MemoryStream();
 
-            // Flush to force audio data onto its own page per the spec
-            FlushPages(oggStream, outputData, true);
+    //        // Stores all the static vorbis bitstream settings
+    //        var info = VorbisInfo.InitVariableBitRate(channels, sampleRate, 1f);
 
-            // =========================================================
-            // BODY (Audio Data)
-            // =========================================================
-            var processingState = ProcessingState.Create(info);
+    //        // set up our packet->stream encoder
+    //        var serial = new Random().Next();
+    //        var oggStream = new OggStream(serial);
 
-            for (int readIndex = 0; readIndex <= floatSamples[0].Length; readIndex += WriteBufferSize)
-            {
-                if (readIndex == floatSamples[0].Length)
-                {
-                    processingState.WriteEndOfStream();
-                }
-                else
-                {
-                    processingState.WriteData(floatSamples, WriteBufferSize, readIndex);
-                }
+    //        // =========================================================
+    //        // HEADER
+    //        // =========================================================
+    //        // Vorbis streams begin with three headers; the initial header (with
+    //        // most of the codec setup parameters) which is mandated by the Ogg
+    //        // bitstream spec.  The second header holds any comment fields.  The
+    //        // third header holds the bitstream codebook.
 
-                while (!oggStream.Finished && processingState.PacketOut(out OggPacket packet))
-                {
-                    oggStream.PacketIn(packet);
+    //        var comments = new Comments();
+    //        comments.AddTag("ARTIST", "TEST");
 
-                    FlushPages(oggStream, outputData, false);
-                }
-            }
+    //        var infoPacket = HeaderPacketBuilder.BuildInfoPacket(info);
+    //        var commentsPacket = HeaderPacketBuilder.BuildCommentsPacket(comments);
+    //        var booksPacket = HeaderPacketBuilder.BuildBooksPacket(info);
 
-            FlushPages(oggStream, outputData, true);
+    //        oggStream.PacketIn(infoPacket);
+    //        oggStream.PacketIn(commentsPacket);
+    //        oggStream.PacketIn(booksPacket);
 
-            return outputData.ToArray();
-        }
+    //        // Flush to force audio data onto its own page per the spec
+    //        FlushPages(oggStream, outputData, true);
 
-        static void FlushPages(OggStream oggStream, Stream output, bool force)
-        {
-            while (oggStream.PageOut(out OggPage page, force))
-            {
-                output.Write(page.Header, 0, page.Header.Length);
-                output.Write(page.Body, 0, page.Body.Length);
-            }
-        }
+    //        // =========================================================
+    //        // BODY (Audio Data)
+    //        // =========================================================
+    //        var processingState = ProcessingState.Create(info);
 
-        static float ByteToSample(short pcmValue)
-        {
-            return pcmValue / 128f;
-        }
+    //        for (int readIndex = 0; readIndex <= floatSamples[0].Length; readIndex += WriteBufferSize)
+    //        {
+    //            if (readIndex == floatSamples[0].Length)
+    //            {
+    //                processingState.WriteEndOfStream();
+    //            }
+    //            else
+    //            {
+    //                processingState.WriteData(floatSamples, WriteBufferSize, readIndex);
+    //            }
 
-        static float ShortToSample(short pcmValue)
-        {
-            return pcmValue / 32768f;
-        }
+    //            while (!oggStream.Finished && processingState.PacketOut(out OggPacket packet))
+    //            {
+    //                oggStream.PacketIn(packet);
+
+    //                FlushPages(oggStream, outputData, false);
+    //            }
+    //        }
+
+    //        FlushPages(oggStream, outputData, true);
+
+    //        return outputData.ToArray();
+    //    }
+
+    //    static void FlushPages(OggStream oggStream, Stream output, bool force)
+    //    {
+    //        while (oggStream.PageOut(out OggPage page, force))
+    //        {
+    //            output.Write(page.Header, 0, page.Header.Length);
+    //            output.Write(page.Body, 0, page.Body.Length);
+    //        }
+    //    }
+
+    //    static float ByteToSample(short pcmValue)
+    //    {
+    //        return pcmValue / 128f;
+    //    }
+
+    //    static float ShortToSample(short pcmValue)
+    //    {
+    //        return pcmValue / 32768f;
+    //    }
     }
 }

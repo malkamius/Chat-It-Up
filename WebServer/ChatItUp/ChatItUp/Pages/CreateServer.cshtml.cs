@@ -17,7 +17,7 @@ namespace ChatItUp.Pages
 
         [BindProperty]
         [Required(ErrorMessage = "Server name is required.")]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         [BindProperty]
         [StringLength(512, ErrorMessage = "Description must be no longer than 512 characters.")]
@@ -36,6 +36,7 @@ namespace ChatItUp.Pages
         {
             _context = context;
             _htmlEncoder = htmlEncoder;
+            Description = string.Empty;
         }
 
         public void OnGet()
@@ -85,6 +86,7 @@ namespace ChatItUp.Pages
 
                         try
                         {
+#if WINDOWS
                             using (var stream = new MemoryStream(imageBytes))
                             {
                                 using (var image = System.Drawing.Image.FromStream(stream))
@@ -103,6 +105,9 @@ namespace ChatItUp.Pages
                                 }
 
                             }
+#else
+                            throw new Exception("Image urls are not supported on the server platform.");
+#endif
 
                         }
                         catch (Exception ex)
@@ -131,6 +136,7 @@ namespace ChatItUp.Pages
                     await UploadedImage.CopyToAsync(stream);
                     try
                     {
+#if WINDOWS
                         using(var newstream = new System.IO.MemoryStream())
                         using (var image = System.Drawing.Image.FromStream(stream))
                         {
@@ -144,6 +150,9 @@ namespace ChatItUp.Pages
                             image.Save(newstream, ImageFormat.Png);
                             serverImageBytes = stream.ToArray();
                         }
+#else
+                        throw new Exception("Image urls are not supported on the server platform.");
+#endif
                     }
                     catch (Exception ex)
                     {

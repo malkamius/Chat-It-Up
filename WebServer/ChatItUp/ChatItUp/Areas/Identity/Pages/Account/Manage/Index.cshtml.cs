@@ -1,6 +1,5 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
-#nullable disable
 
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -28,27 +27,28 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
             _userManager = userManager;
             _signInManager = signInManager;
             _context = context;
+            _htmlEncoder = htmlEncoder;
         }
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        public string Username { get; set; }
+        public string Username { get; set; } = string.Empty;
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         [TempData]
-        public string StatusMessage { get; set; }
+        public string StatusMessage { get; set; } = string.Empty;
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         [BindProperty]
-        public InputModel Input { get; set; }
+        public InputModel Input { get; set; } = new InputModel();
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
@@ -62,15 +62,15 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
             /// </summary>
             [Phone]
             [Display(Name = "Phone number")]
-            public string PhoneNumber { get; set; }
+            public string PhoneNumber { get; set; } = string.Empty;
 
             [Display(Name = "Display Name")]
-            public string? DisplayName { get; set; }
+            public string? DisplayName { get; set; } = string.Empty;
         }
 
         private async Task LoadAsync(IdentityUser user)
         {
-            var userName = await _userManager.GetUserNameAsync(user);
+            var userName = await _userManager.GetUserNameAsync(user) ?? string.Empty;
             var phoneNumber = await _userManager.GetPhoneNumberAsync(user);
             var dataUser = _context.Users.FirstOrDefault(u => u.Id == Guid.Parse(user.Id));
 
@@ -78,7 +78,7 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
 
             Input = new InputModel
             {
-                PhoneNumber = phoneNumber,
+                PhoneNumber = phoneNumber ?? string.Empty,
                 DisplayName = dataUser != null? dataUser.DisplayName : null
             };
         }
@@ -98,7 +98,7 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
         public async Task<IActionResult> OnPostAsync()
         {
             var user = await _userManager.GetUserAsync(User);
-            var dataUser = _context.Users.FirstOrDefault(u => u.Id == Guid.Parse(user.Id));
+            var dataUser = user != null? _context.Users.First(u => u.Id == Guid.Parse(user.Id)) : null;
 
             if (user == null || dataUser == null)
             {
@@ -122,7 +122,7 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
                 }
             }
 
-            string newDisplayName = null;
+            string? newDisplayName = null;
             if (!string.IsNullOrEmpty(Input.DisplayName) && !string.IsNullOrEmpty(Input.DisplayName.Trim()))
                 newDisplayName = _htmlEncoder.Encode(Input.DisplayName.Trim());
             
@@ -133,7 +133,7 @@ namespace ChatItUp.Areas.Identity.Pages.Account.Manage
             {
                 if (!string.IsNullOrEmpty(newDisplayName))
                 {
-                    var conflict = _context.Users.FirstOrDefault(u => u.DisplayName.ToLower() == newDisplayName.ToLower());
+                    var conflict = _context.Users.FirstOrDefault(u => (u.DisplayName != null? u.DisplayName.ToLower() : u.EmailAddress.ToLower()) == newDisplayName.ToLower());
                     if (conflict != null)
                     {
                         StatusMessage = "That display name is already taken.";

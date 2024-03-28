@@ -6,7 +6,6 @@ using System.IO;
 using System.Security.Claims;
 using System.Text;
 using System.Xml.Linq;
-using OggVorbisEncoder;
 using MimeKit.Encodings;
 using NuGet.Protocol;
 using ChatItUp.webm;
@@ -55,7 +54,7 @@ namespace ChatItUp.Services
                     {
                         var groupName = "server_" + server.Id.ToString();
                         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
-                        await Clients.Group(groupName).SendAsync("UserConnected", server.Id, userId, user.DisplayName ?? user.EmailAddress, server.IsOwner);
+                        await Clients.Group(groupName).SendAsync("UserConnected", server.Id, userId, user?.DisplayName ?? user?.EmailAddress, server.IsOwner);
                     }
                 }
             }
@@ -85,7 +84,7 @@ namespace ChatItUp.Services
                     foreach (var server in servers)
                     {
                         var groupName = "server_" + server.Id.ToString();
-                        await Clients.Group(groupName).SendAsync("UserDisconnected", server.Id, userId, user.DisplayName ?? user.EmailAddress, server.IsOwner);
+                        await Clients.Group(groupName).SendAsync("UserDisconnected", server.Id, userId, user?.DisplayName ?? user?.EmailAddress, server.IsOwner);
                         await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
                     }
                 }
@@ -130,7 +129,10 @@ namespace ChatItUp.Services
                     message = _htmlEncoder.Encode(message);
                     var channel = await _chatService.GetChannelAsync(channelIdGuid);
 
-                    await Clients.Group("server_" + channel.ServerId.ToString()).SendAsync("ReceiveMessage", channelId, userId.ToString(), message);
+                    if (channel != null && channel.ServerId.HasValue)
+                    {
+                        await Clients.Group("server_" + channel.ServerId.ToString()).SendAsync("ReceiveMessage", channelId, userId.ToString(), message);
+                    }
                     await _chatService.SendMessageAsync(userId, channelIdGuid, message);
                 }
             }

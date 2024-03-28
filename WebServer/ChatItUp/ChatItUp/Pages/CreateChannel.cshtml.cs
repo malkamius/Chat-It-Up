@@ -23,7 +23,7 @@ namespace ChatItUp.Pages
 
         [BindProperty]
         [Required(ErrorMessage = "Channel name is required.")]
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         
         Context.CIUDataDbContext _context;
@@ -72,7 +72,7 @@ namespace ChatItUp.Pages
                 return BadRequest("Name is required.");
             }
             Name = _htmlEncoder.Encode(Name.Trim());
-            var channelExists = _context.ServerChannels.Any(c => c.ServerId == server.Id && c.DeletedOn == null && c.Name.Equals(Name.Trim()));
+            var channelExists = _context.Channels.Any(c => c.ServerId == server.Id && c.DeletedOn == null && c.Name.Equals(Name.Trim()));
             
             if(channelExists)
             {
@@ -87,8 +87,8 @@ namespace ChatItUp.Pages
                 return BadRequest("There was an error with the data submitted.");
             }
 
-            var channel = new Models.ServerChannel() { Id = Guid.NewGuid(), ServerId = ServerId, Name = Name };
-            await _context.ServerChannels.AddAsync(channel);
+            var channel = new Models.Channel() { Id = Guid.NewGuid(), ServerId = ServerId, Name = Name };
+            await _context.Channels.AddAsync(channel);
             await _context.SaveChangesAsync();
 
             await _hubContext.Clients.Users(from usid in (await _chatService.GetUsersForServer(ServerId)) select usid.ToString()).SendAsync("ChannelAdded", ServerId, channel.Id);

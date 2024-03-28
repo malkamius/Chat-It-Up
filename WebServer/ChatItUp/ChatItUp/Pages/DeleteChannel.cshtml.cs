@@ -41,7 +41,7 @@ namespace ChatItUp.Pages
                 return;
             }
 
-            var channel = (from c in _context.ServerChannels join s in _context.Servers on c.ServerId equals s.Id where s.ServerOwner == userId && c.Id == ChannelId.Value select c).FirstOrDefault();
+            var channel = (from c in _context.Channels join s in _context.Servers on c.ServerId equals s.Id where s.ServerOwner == userId && c.Id == ChannelId.Value select c).FirstOrDefault();
 
             if (channel == null)
             {
@@ -64,7 +64,7 @@ namespace ChatItUp.Pages
                 ModelState.AddModelError(string.Empty, "Server ID not set.");
                 return BadRequest("Server ID not set.");
             }
-            var channel = (from c in _context.ServerChannels join s in _context.Servers on c.ServerId equals s.Id where s.ServerOwner == userId && c.Id == ChannelId.Value select c).FirstOrDefault();
+            var channel = (from c in _context.Channels join s in _context.Servers on c.ServerId equals s.Id where s.ServerOwner == userId && c.Id == ChannelId.Value select c).FirstOrDefault();
 
             if (channel == null)
             {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 
 namespace ChatItUp.Models;
 
@@ -10,15 +9,15 @@ public partial class Server
 
     public string Name { get; set; } = null!;
 
-    public string? Description { get; set; } = null;
+    public string? Description { get; set; }
 
     public DateTime CreatedOn { get; set; }
 
     public Guid ServerOwner { get; set; }
 
-    public byte[]? Image { get; set; } = null;
+    public byte[]? Image { get; set; }
 
-    public DateTime? DeletedOn { get; set; } = null;
+    public DateTime? DeletedOn { get; set; }
 
     public virtual ICollection<UserServer> UserServers { get; set; } = new List<UserServer>();
 }
